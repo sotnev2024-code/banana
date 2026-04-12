@@ -13,7 +13,7 @@ export default function HistoryPage() {
   }, [])
 
   const statusClass: Record<string, string> = {
-    DONE: 'badge-done', PENDING: 'badge-pend', PROCESSING: 'badge-proc', FAILED: 'badge-fail',
+    DONE: 'badge-done', PENDING: 'badge-pend', PROCESSING: 'badge-proc', FAILED: 'badge-fail', REFUNDED: 'badge-fail',
   }
 
   return (

@@ -62,6 +62,7 @@ const translations = {
     'history.status.pending': 'ожидание',
     'history.status.processing': 'генерация',
     'history.status.failed': 'ошибка',
+    'history.status.refunded': 'возврат',
 
     // Profile
     'profile.title': 'Профиль',
@@ -224,6 +225,7 @@ const translations = {
     'history.status.pending': 'pending',
     'history.status.processing': 'processing',
     'history.status.failed': 'failed',
+    'history.status.refunded': 'refunded',
 
     // Profile
     'profile.title': 'Profile',
