@@ -12,6 +12,7 @@ export default function GenerationDetailPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [detail, setDetail] = useState<GenerationDetail | null>(null)
   const [showComments, setShowComments] = useState(false)
+  const [showPromptPanel, setShowPromptPanel] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Load feed items for swiping
@@ -63,7 +64,9 @@ export default function GenerationDetailPage() {
           detail={index === currentIndex ? detail : null}
           isActive={index === currentIndex}
           showComments={index === currentIndex && showComments}
-          onToggleComments={() => setShowComments(v => !v)}
+          showPromptPanel={index === currentIndex && showPromptPanel}
+          onToggleComments={() => { setShowComments(v => !v); setShowPromptPanel(false) }}
+          onTogglePromptPanel={() => { setShowPromptPanel(v => !v); setShowComments(false) }}
           onBack={() => navigate(-1)}
           onTryPrompt={() => navigate('/create', { state: { prompt: item.prompt, model: item.model } })}
           user={user}
@@ -73,12 +76,14 @@ export default function GenerationDetailPage() {
   )
 }
 
-function ViewerSlide({ item, detail, isActive, showComments, onToggleComments, onBack, onTryPrompt, user }: {
+function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, onToggleComments, onTogglePromptPanel, onBack, onTryPrompt, user }: {
   item: Generation
   detail: GenerationDetail | null
   isActive: boolean
   showComments: boolean
+  showPromptPanel: boolean
   onToggleComments: () => void
+  onTogglePromptPanel: () => void
   onBack: () => void
   onTryPrompt: () => void
   user: any
@@ -89,7 +94,6 @@ function ViewerSlide({ item, detail, isActive, showComments, onToggleComments, o
   const [comments, setComments] = useState<CommentItem[]>([])
   const [commentsCount, setCommentsCount] = useState(0)
   const [commentText, setCommentText] = useState('')
-  const [showPrompt, setShowPrompt] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -204,7 +208,7 @@ function ViewerSlide({ item, detail, isActive, showComments, onToggleComments, o
       </div>
 
       {/* Bottom info */}
-      <div className="viewer-bottom" onClick={() => setShowPrompt(!showPrompt)}>
+      <div className="viewer-bottom" onClick={onTogglePromptPanel}>
         {/* Author */}
         {item.user && (
           <div className="viewer-author">
@@ -216,11 +220,40 @@ function ViewerSlide({ item, detail, isActive, showComments, onToggleComments, o
             <span className="viewer-model">{item.model.replace(/-/g, ' ')}</span>
           </div>
         )}
-        {/* Prompt */}
-        <div className={`viewer-prompt ${showPrompt ? 'expanded' : ''}`}>
+        {/* Prompt preview — 2 lines */}
+        <div className="viewer-prompt">
           {item.prompt}
         </div>
       </div>
+
+      {/* Prompt panel */}
+      {showPromptPanel && (
+        <div className="viewer-comments-panel">
+          <div className="viewer-comments-header">
+            <span>{t('detail.prompt')}</span>
+            <button onClick={onTogglePromptPanel} style={{ color: '#fff' }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round">
+                <path d="M4 4l12 12M16 4L4 16"/>
+              </svg>
+            </button>
+          </div>
+          <div className="viewer-comments-list" style={{ padding: '16px' }}>
+            <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.9)' }}>
+              {item.prompt}
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', padding: '4px 10px', background: 'rgba(255,255,255,0.08)', borderRadius: 8 }}>
+                {item.model.replace(/-/g, ' ')}
+              </div>
+              {item.tokensSpent > 0 && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', padding: '4px 10px', background: 'rgba(255,255,255,0.08)', borderRadius: 8 }}>
+                  {item.tokensSpent} {t('profile.tokens')}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Comments panel */}
       {showComments && (
