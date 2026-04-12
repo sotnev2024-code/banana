@@ -1,8 +1,8 @@
-import type { Telegraf, Context } from 'telegraf'
+import type { Telegraf } from 'telegraf'
 import type { Redis } from 'ioredis'
 import { prisma } from '../index'
 
-export function subscribeToResults(bot: Telegraf<Context>, redis: Redis) {
+export function subscribeToResults(bot: Telegraf<any>, redis: Redis) {
   const subscriber = redis.duplicate()
 
   subscriber.subscribe('generation:done', (err) => {
