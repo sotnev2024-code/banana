@@ -130,7 +130,7 @@ async function sendResultToUser(gen: any, localUrl: string, originalUrl: string)
     IMAGE: 'Image', VIDEO: 'Video', MUSIC: 'Music', MOTION: 'Motion',
   }
 
-  const caption = `${typeLabel[gen.type] ?? 'Generation'} — ${gen.model.replace(/-/g, ' ')}\n\n${gen.prompt.slice(0, 200)}`
+  const caption = `${typeLabel[gen.type] ?? 'Generation'} — ${gen.model.replace(/-/g, ' ')}`
 
   const inlineKeyboard = JSON.stringify({
     inline_keyboard: [
