@@ -73,10 +73,15 @@ export default function ProfilePage() {
         </div>
 
         {/* Daily bonus */}
-        {canClaimDaily && !dailyClaimed ? (
+        {dailyClaimed && dailyResult ? (
+          <div className="card" style={{ padding: 16, textAlign: 'center', background: 'var(--accent-light)' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>+{dailyResult.tokens} {t('profile.dailyClaimed')}</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)' }}>{t('profile.dailySeries', { streak: String(dailyResult.streak) })}</div>
+          </div>
+        ) : canClaimDaily ? (
           <div className="card daily-bonus-card" onClick={handleClaimDaily}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{t('profile.dailyBonus')}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t('profile.dailyBonus')}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                 {t('profile.dailyDay', { day: String(nextStreak) })} — {t('profile.dailyGet', { tokens: String(nextBonus) })}
               </div>
@@ -85,15 +90,10 @@ export default function ProfilePage() {
               {dailyLoading ? '...' : t('profile.dailyClaim')}
             </div>
           </div>
-        ) : dailyClaimed && dailyResult ? (
-          <div className="card" style={{ padding: 16, textAlign: 'center', background: 'var(--accent-light)' }}>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>+{dailyResult.tokens} {t('profile.dailyClaimed')}</div>
-            <div style={{ fontSize: 12, color: 'var(--text2)' }}>{t('profile.dailySeries', { streak: String(dailyResult.streak) })}</div>
-          </div>
         ) : (
-          <div className="card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 12, opacity: 0.5 }}>
+          <div className="card daily-bonus-disabled">
             <div>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{t('profile.dailyBonus')}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t('profile.dailyBonus')}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>{t('profile.dailyComeBack')} {t('profile.dailyStreak', { streak: String(user.dailyStreak) })}</div>
             </div>
           </div>
