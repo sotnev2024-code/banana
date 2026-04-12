@@ -54,6 +54,10 @@ const translations = {
     'detail.tryPrompt': 'Попробовать промпт',
     'detail.addFavorite': 'В избранное',
     'detail.removeFavorite': 'Из избранного',
+    'detail.comments': 'Комментарии',
+    'detail.commentPlaceholder': 'Написать комментарий...',
+    'detail.send': 'Отправить',
+    'detail.noComments': 'Пока нет комментариев',
 
     // History
     'history.title': 'История',
@@ -217,6 +221,10 @@ const translations = {
     'detail.tryPrompt': 'Try this prompt',
     'detail.addFavorite': 'Add to favorites',
     'detail.removeFavorite': 'Remove from favorites',
+    'detail.comments': 'Comments',
+    'detail.commentPlaceholder': 'Write a comment...',
+    'detail.send': 'Send',
+    'detail.noComments': 'No comments yet',
 
     // History
     'history.title': 'History',

@@ -22,7 +22,9 @@ export async function feedRoutes(app: FastifyInstance) {
         prompt: true,
         resultUrl: true,
         tokensSpent: true,
+        likesCount: true,
         createdAt: true,
+        _count: { select: { comments: true } },
         user: { select: { firstName: true, username: true, photoUrl: true } },
       },
     })
@@ -30,9 +32,10 @@ export async function feedRoutes(app: FastifyInstance) {
     const hasMore = items.length > take
     if (hasMore) items.pop()
 
-    // Replace full URLs with thumbnails for feed (faster loading)
     const feedItems = items.map(item => ({
       ...item,
+      commentsCount: (item as any)._count?.comments ?? 0,
+      _count: undefined,
       thumbnailUrl: item.resultUrl?.includes('/uploads/gen/')
         ? item.resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/')
         : item.resultUrl,
@@ -52,21 +55,29 @@ export async function feedRoutes(app: FastifyInstance) {
       where: { id },
       include: {
         user: { select: { firstName: true, username: true, photoUrl: true } },
+        comments: {
+          include: { user: { select: { firstName: true, username: true, photoUrl: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
+        _count: { select: { comments: true } },
       },
     })
 
     if (!item) return reply.code(404).send({ error: 'Not found' })
 
-    // Check if favorited by current user (if authenticated)
+    let isLiked = false
     let isFavorited = false
     try {
       const authHeader = req.headers.authorization
       if (authHeader) {
         const decoded = await (req as any).jwtVerify().catch(() => null)
         if (decoded?.userId) {
-          const fav = await prisma.favorite.findUnique({
-            where: { userId_generationId: { userId: decoded.userId, generationId: id } },
-          })
+          const [like, fav] = await Promise.all([
+            prisma.like.findUnique({ where: { userId_generationId: { userId: decoded.userId, generationId: id } } }),
+            prisma.favorite.findUnique({ where: { userId_generationId: { userId: decoded.userId, generationId: id } } }),
+          ])
+          isLiked = !!like
           isFavorited = !!fav
         }
       }
@@ -74,8 +85,66 @@ export async function feedRoutes(app: FastifyInstance) {
 
     return reply.send({
       ...item,
-      telegramId: undefined,
+      commentsCount: (item as any)._count?.comments ?? 0,
+      _count: undefined,
+      isLiked,
       isFavorited,
     })
+  })
+
+  // POST /feed/:id/like — toggle like
+  app.post('/:id/like', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const { id } = req.params as { id: string }
+
+    const existing = await prisma.like.findUnique({
+      where: { userId_generationId: { userId, generationId: id } },
+    })
+
+    if (existing) {
+      await prisma.$transaction([
+        prisma.like.delete({ where: { id: existing.id } }),
+        prisma.generation.update({ where: { id }, data: { likesCount: { decrement: 1 } } }),
+      ])
+      const gen = await prisma.generation.findUnique({ where: { id }, select: { likesCount: true } })
+      return reply.send({ liked: false, likesCount: gen?.likesCount ?? 0 })
+    } else {
+      await prisma.$transaction([
+        prisma.like.create({ data: { userId, generationId: id } }),
+        prisma.generation.update({ where: { id }, data: { likesCount: { increment: 1 } } }),
+      ])
+      const gen = await prisma.generation.findUnique({ where: { id }, select: { likesCount: true } })
+      return reply.send({ liked: true, likesCount: gen?.likesCount ?? 0 })
+    }
+  })
+
+  // GET /feed/:id/comments
+  app.get('/:id/comments', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const comments = await prisma.comment.findMany({
+      where: { generationId: id },
+      include: { user: { select: { firstName: true, username: true, photoUrl: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
+    return reply.send(comments)
+  })
+
+  // POST /feed/:id/comments
+  app.post('/:id/comments', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const { id } = req.params as { id: string }
+    const { text } = req.body as { text: string }
+
+    if (!text?.trim() || text.length > 500) {
+      return reply.code(400).send({ error: 'Invalid comment' })
+    }
+
+    const comment = await prisma.comment.create({
+      data: { userId, generationId: id, text: text.trim() },
+      include: { user: { select: { firstName: true, username: true, photoUrl: true } } },
+    })
+
+    return reply.send(comment)
   })
 }

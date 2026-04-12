@@ -71,6 +71,16 @@ export const getGeneration = (id: string) =>
 export const getFeedItem = (id: string) =>
   req<GenerationDetail>('GET', `/feed/${id}`)
 
+// Likes
+export const toggleLike = (id: string) =>
+  req<{ liked: boolean; likesCount: number }>('POST', `/feed/${id}/like`, {})
+
+// Comments
+export const getComments = (id: string) =>
+  req<CommentItem[]>('GET', `/feed/${id}/comments`)
+export const addComment = (id: string, text: string) =>
+  req<CommentItem>('POST', `/feed/${id}/comments`, { text })
+
 // Plans
 export const getPlans = () => req<Plan[]>('GET', '/plans')
 
@@ -144,6 +154,17 @@ export interface Generation {
 export interface GenerationDetail extends Generation {
   imageUrl?: string
   settings?: Record<string, string | number | boolean>
+  likesCount: number
+  commentsCount: number
+  isLiked?: boolean
+  comments?: CommentItem[]
+}
+
+export interface CommentItem {
+  id: string
+  text: string
+  createdAt: string
+  user: { firstName: string; username?: string; photoUrl?: string }
 }
 
 export interface PaginatedGenerations {

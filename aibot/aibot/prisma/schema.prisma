@@ -34,6 +34,8 @@ model User {
   transactions Transaction[]
   payments     Payment[]
   favorites    Favorite[]
+  likes        Like[]
+  comments     Comment[]
   achievements UserAchievement[]
   promoCodes   PromoCodeUsage[]
 }
@@ -51,16 +53,43 @@ model Generation {
   kieTaskId   String?
   tokensSpent Int
   isPublic    Boolean          @default(true)
+  likesCount  Int              @default(0)
   errorMsg    String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   favorites   Favorite[]
+  likes       Like[]
+  comments    Comment[]
 
   @@index([userId])
   @@index([type])
   @@index([status])
   @@index([isPublic, createdAt])
+}
+
+model Like {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  generationId String
+  generation   Generation @relation(fields: [generationId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, generationId])
+  @@index([generationId])
+}
+
+model Comment {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  generationId String
+  generation   Generation @relation(fields: [generationId], references: [id])
+  text         String
+  createdAt    DateTime   @default(now())
+
+  @@index([generationId])
 }
 
 model Transaction {
