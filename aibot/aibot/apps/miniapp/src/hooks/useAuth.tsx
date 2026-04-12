@@ -1,16 +1,20 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { authTelegram, setToken, type User } from '../api/client'
+import { authTelegram, setToken, type UserFull } from '../api/client'
 
 interface AuthCtx {
-  user: User | null
+  user: UserFull | null
   loading: boolean
   refresh: () => Promise<void>
 }
 
 const Ctx = createContext<AuthCtx>({ user: null, loading: true, refresh: async () => {} })
 
+function applyTheme(theme: string) {
+  document.documentElement.setAttribute('data-theme', theme || 'auto')
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<UserFull | null>(null)
   const [loading, setLoading] = useState(true)
 
   const init = async () => {
@@ -19,7 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const initData = tg?.initData ?? ''
 
       if (!initData) {
-        // Dev fallback — use a mock token if no Telegram context
         console.warn('No Telegram initData — dev mode')
         setLoading(false)
         return
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(token)
       localStorage.setItem('jwt', token)
       setUser(user)
+      applyTheme(user.theme)
     } catch (e) {
       console.error('Auth failed', e)
     } finally {
@@ -40,10 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { getMe } = await import('../api/client')
     const u = await getMe()
     setUser(u)
+    applyTheme(u.theme)
   }
 
   useEffect(() => {
-    // Restore token from storage if available
     const saved = localStorage.getItem('jwt')
     if (saved) setToken(saved)
     init()
