@@ -44,6 +44,23 @@ export const getFeed = (type?: string, cursor?: string) => {
   return req<PaginatedGenerations>('GET', `/feed?${params}`)
 }
 
+// Upload
+export async function uploadFile(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+
+  const headers: Record<string, string> = {}
+  if (_token) headers['Authorization'] = `Bearer ${_token}`
+
+  const res = await fetch(`${BASE}/upload`, { method: 'POST', headers, body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(err.error ?? 'Upload failed')
+  }
+  const data = await res.json() as { url: string }
+  return data.url
+}
+
 // Generate
 export const createGeneration = (body: { model: string; prompt: string; imageUrl?: string; isPublic?: boolean; settings?: Record<string, string | number | boolean> }) =>
   req<{ id: string; status: string }>('POST', '/generate', body)

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { MODELS, type ModelConfig, getModelsByType, calculatePrice } from '@aibot/shared'
-import { createGeneration } from '../api/client'
+import { createGeneration, uploadFile } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { ModelSettings } from '../components/ui/ModelSettings'
 import { t } from '../i18n'
@@ -80,6 +80,7 @@ export default function CreatePage() {
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [prompt, setPrompt] = useState(state?.prompt ?? '')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [modelSettings, setModelSettings] = useState<Record<string, string | number | boolean>>({})
   const [genState, setGenState] = useState<GenState>('idle')
   const [resultUrl, setResultUrl] = useState<string | null>(null)
@@ -134,15 +135,20 @@ export default function CreatePage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setImageFile(file)
     setImageUrl(URL.createObjectURL(file))
   }
 
   const handleGenerate = async () => {
     if (!selectedModel || !prompt.trim()) return
-    const fullPrompt = prompt
     setGenState('loading'); setError('')
     try {
-      const gen = await createGeneration({ model: selectedModel, prompt: fullPrompt, imageUrl: imageUrl ?? undefined, isPublic, settings: modelSettings })
+      // Upload reference image if selected
+      let uploadedUrl: string | undefined
+      if (imageFile) {
+        uploadedUrl = await uploadFile(imageFile)
+      }
+      const gen = await createGeneration({ model: selectedModel, prompt, imageUrl: uploadedUrl, isPublic, settings: modelSettings })
       setGenId(gen.id); setGenState('polling')
     } catch (err: any) {
       setError(err.message ?? 'Error'); setGenState('error')

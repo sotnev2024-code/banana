@@ -4,11 +4,13 @@ import jwt from '@fastify/jwt'
 import { PrismaClient } from '@prisma/client'
 import { Redis } from 'ioredis'
 
+import multipart from '@fastify/multipart'
 import { authRoutes } from './routes/auth'
 import { feedRoutes } from './routes/feed'
 import { generateRoutes } from './routes/generate'
 import { paymentRoutes } from './routes/payment'
 import { plansRoutes, profileRoutes } from './routes/profile'
+import { uploadRoutes } from './routes/upload'
 import { startGenerationWorker } from './workers/generation.worker'
 
 export const prisma = new PrismaClient()
@@ -23,6 +25,7 @@ async function main() {
   })
 
   await app.register(jwt, { secret: process.env.JWT_SECRET! })
+  await app.register(multipart, { limits: { fileSize: 30 * 1024 * 1024 } })
 
   // Auth decorator
   app.decorate('authenticate', async (request: any, reply: any) => {
@@ -40,6 +43,7 @@ async function main() {
   app.register(plansRoutes,   { prefix: '/plans' })
   app.register(paymentRoutes, { prefix: '/payment' })
   app.register(profileRoutes, { prefix: '/me' })
+  app.register(uploadRoutes,  { prefix: '/upload' })
 
   app.get('/health', async () => ({ ok: true }))
 
