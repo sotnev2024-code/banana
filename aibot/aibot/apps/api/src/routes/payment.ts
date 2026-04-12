@@ -66,8 +66,8 @@ export async function paymentRoutes(app: FastifyInstance) {
     })
   })
 
-  // POST /payment/yukassa/webhook — called by YuKassa
-  app.post('/yukassa/webhook', async (req, reply) => {
+  // POST /payment/webhook and /payment/yukassa/webhook — called by YuKassa
+  const webhookHandler = async (req: any, reply: any) => {
     // Verify webhook IP (YuKassa sends from specific IPs — add middleware in production)
     const body = req.body as Record<string, unknown>
     const event = body.event as string
@@ -101,7 +101,10 @@ export async function paymentRoutes(app: FastifyInstance) {
     }
 
     return reply.send({ ok: true })
-  })
+  }
+
+  app.post('/webhook', webhookHandler)
+  app.post('/yukassa/webhook', webhookHandler)
 }
 
 async function notifyUser(telegramId: string, tokens: number) {
