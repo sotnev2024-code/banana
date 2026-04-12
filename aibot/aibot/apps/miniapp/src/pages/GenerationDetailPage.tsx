@@ -57,8 +57,24 @@ export default function GenerationDetailPage() {
     }
   }, [currentIndex, items.length, initialScrollDone])
 
+  // Swipe right to go back
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
+    // Horizontal swipe right > 80px and mostly horizontal
+    if (dx > 80 && dy < 100) {
+      navigate(-1)
+    }
+  }
+
   if (items.length === 0) {
-    return <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+    return <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', zIndex: 200 }}>
       <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
@@ -69,6 +85,8 @@ export default function GenerationDetailPage() {
       ref={containerRef}
       className="viewer-container"
       onScroll={handleScroll}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {items.map((item, index) => (
         <ViewerSlide

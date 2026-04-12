@@ -563,14 +563,21 @@ img, video { display: block; max-width: 100%; }
 
 /* TikTok-style viewer */
 .viewer-container {
-  height: 100dvh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   background: #000;
+  z-index: 200;
 }
 .viewer-slide {
   height: 100dvh;
+  width: 100%;
   scroll-snap-align: start;
+  scroll-snap-stop: always;
   position: relative;
   display: flex;
   align-items: center;
@@ -587,17 +594,17 @@ img, video { display: block; max-width: 100%; }
 }
 .viewer-back {
   position: absolute;
-  top: 12px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
   left: 12px;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: 30;
 }
 .viewer-actions {
   position: absolute;
