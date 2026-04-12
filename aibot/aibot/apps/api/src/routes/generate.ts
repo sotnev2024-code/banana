@@ -63,8 +63,7 @@ export async function generateRoutes(app: FastifyInstance) {
 
     // Enqueue task
     await generationQueue.add('generate', { generationId: generation.id, modelId, prompt, imageUrl }, {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 },
+      attempts: 1,
     })
 
     return reply.code(202).send({ id: generation.id, status: 'PENDING' })

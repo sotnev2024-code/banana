@@ -89,15 +89,7 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         await (connection as any).publish?.('generation:done', JSON.stringify({ generationId }))
       } catch {}
     },
-    {
-      connection,
-      concurrency: 5,
-      defaultJobOptions: {
-        attempts: 1,        // no retries — refund handles failures
-        removeOnComplete: 100,
-        removeOnFail: 100,
-      },
-    },
+    { connection, concurrency: 5 },
   )
 
   worker.on('failed', (job, err) => {
