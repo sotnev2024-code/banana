@@ -30,11 +30,6 @@ const MODEL_COLORS: Record<string, string> = {
   'suno-v5-5': 'linear-gradient(135deg,#26215C,#7F77DD)',
 }
 
-const QUICK_STYLE_KEYS = [
-  'create.styles.realism', 'create.styles.anime', 'create.styles.art',
-  'create.styles.3d', 'create.styles.cinema', 'create.styles.minimal', 'create.styles.watercolor',
-] as const
-
 const TYPE_TABS = [
   { id: 'IMAGE',  key: 'feed.photo' as const },
   { id: 'VIDEO',  key: 'feed.video' as const },
@@ -84,7 +79,6 @@ export default function CreatePage() {
   const [type, setType] = useState<string>('IMAGE')
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [prompt, setPrompt] = useState(state?.prompt ?? '')
-  const [style, setStyle] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [modelSettings, setModelSettings] = useState<Record<string, string | number | boolean>>({})
   const [genState, setGenState] = useState<GenState>('idle')
@@ -144,7 +138,7 @@ export default function CreatePage() {
 
   const handleGenerate = async () => {
     if (!selectedModel || !prompt.trim()) return
-    const fullPrompt = style ? `${prompt}, ${style} style` : prompt
+    const fullPrompt = prompt
     setGenState('loading'); setError('')
     try {
       const gen = await createGeneration({ model: selectedModel, prompt: fullPrompt, imageUrl: imageUrl ?? undefined, settings: modelSettings })
@@ -244,26 +238,6 @@ export default function CreatePage() {
 
         <textarea className="prompt-area" placeholder={t('create.promptPlaceholder')}
           value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} />
-
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>{t('create.quickStyle')}</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {QUICK_STYLE_KEYS.map(key => {
-              const s = t(key)
-              return (
-                <button key={key} onClick={() => setStyle(style === s ? '' : s)}
-                  style={{
-                    padding: '5px 12px', borderRadius: 20, fontSize: 12,
-                    border: `0.5px solid ${style === s ? 'var(--accent)' : 'var(--border)'}`,
-                    background: style === s ? 'var(--accent-light)' : 'transparent',
-                    color: style === s ? 'var(--accent-dark)' : 'var(--text2)',
-                  }}>
-                  {s}
-                </button>
-              )
-            })}
-          </div>
-        </div>
 
         {error && (
           <div style={{ padding: '10px 14px', background: '#fcebeb', borderRadius: 10, fontSize: 13, color: '#a32d2d' }}>{error}</div>
