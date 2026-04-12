@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(pm2:*)",
+      "Bash(node:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(which:*)",
+      "Bash(timeout:*)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Agent",
+      "WebFetch",
+      "WebSearch",
+      "TodoWrite",
+      "NotebookEdit",
+      "Bash(ssh -o ConnectTimeout=10 root@31.130.150.174 \"cd /opt/banana/aibot/aibot && npx prisma db push --accept-data-loss 2>&1 | tail -20\")"
+    ],
+    "defaultMode": "bypassPermissions"
+  }
+}
