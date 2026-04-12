@@ -73,9 +73,26 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         return
       }
 
+      // Download result to local server for fast delivery
+      let localUrl = result.resultUrl
+      try {
+        const { execSync } = require('child_process')
+        const ext = result.resultUrl.match(/\.(jpeg|jpg|png|webp|mp4|mp3|wav)/)?.[0] ?? '.bin'
+        const filename = `${generationId}${ext}`
+        execSync(`mkdir -p /opt/banana/uploads/gen/thumb`)
+        execSync(`curl -s -4 -o /opt/banana/uploads/gen/${filename} "${result.resultUrl}"`, { timeout: 30000 })
+        // Create thumbnail for images
+        if (['.jpeg', '.jpg', '.png', '.webp'].includes(ext)) {
+          execSync(`convert /opt/banana/uploads/gen/${filename} -resize 400x -quality 80 /opt/banana/uploads/gen/thumb/${filename} 2>/dev/null || true`, { timeout: 10000 })
+        }
+        localUrl = `${process.env.API_URL ?? 'https://picpulse.fun'}/uploads/gen/${filename}`
+      } catch (e) {
+        console.error('Failed to download result locally:', e)
+      }
+
       await prisma.generation.update({
         where: { id: generationId },
-        data: { status: 'DONE', resultUrl: result.resultUrl },
+        data: { status: 'DONE', resultUrl: localUrl },
       })
 
       // Notify via bot (publish to Redis pub/sub)

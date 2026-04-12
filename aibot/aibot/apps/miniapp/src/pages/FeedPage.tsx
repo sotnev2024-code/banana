@@ -51,7 +51,7 @@ function FeedCard({ item, onClick }: { item: Generation; onClick: () => void }) 
           </span>
         </div>
       ) : item.resultUrl ? (
-        <img src={item.resultUrl} alt={item.prompt} loading="lazy"
+        <img src={(item as any).thumbnailUrl ?? item.resultUrl} alt={item.prompt} loading="lazy"
           style={{ width: '100%', minHeight: 100, objectFit: 'cover', borderRadius: 12 }} />
       ) : (
         <div className="skeleton" style={{ height: 120 }} />

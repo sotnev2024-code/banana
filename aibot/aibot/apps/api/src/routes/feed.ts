@@ -21,6 +21,7 @@ export async function feedRoutes(app: FastifyInstance) {
         model: true,
         prompt: true,
         resultUrl: true,
+        tokensSpent: true,
         createdAt: true,
         user: { select: { firstName: true, username: true, photoUrl: true } },
       },
@@ -29,8 +30,16 @@ export async function feedRoutes(app: FastifyInstance) {
     const hasMore = items.length > take
     if (hasMore) items.pop()
 
+    // Replace full URLs with thumbnails for feed (faster loading)
+    const feedItems = items.map(item => ({
+      ...item,
+      thumbnailUrl: item.resultUrl?.includes('/uploads/gen/')
+        ? item.resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/')
+        : item.resultUrl,
+    }))
+
     return reply.send({
-      items,
+      items: feedItems,
       nextCursor: hasMore ? items[items.length - 1].id : null,
     })
   })
