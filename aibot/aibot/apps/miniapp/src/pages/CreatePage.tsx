@@ -6,28 +6,34 @@ import { useAuth } from '../hooks/useAuth'
 import { ModelSettings } from '../components/ui/ModelSettings'
 import { t } from '../i18n'
 
+const PREVIEW_BASE = '/uploads/previews'
+
+// Models with image/video previews on server
+const MODEL_PREVIEWS: Record<string, { type: 'image' | 'video'; file: string }> = {
+  // Images
+  'nano-banana-pro':    { type: 'image', file: 'nano-banana-pro-thumb.jpg' },
+  'nano-banana-2':      { type: 'image', file: 'nano-banana-2-thumb.jpg' },
+  'seedream-4-5-edit':  { type: 'image', file: 'seedream-4-5-edit-thumb.jpg' },
+  'seedream-5-lite':    { type: 'image', file: 'seedream-5-lite-thumb.jpg' },
+  'grok-text-to-image': { type: 'image', file: 'grok-text-to-image-thumb.jpg' },
+  'grok-image-to-image':{ type: 'image', file: 'grok-image-to-image-thumb.jpg' },
+  // Videos
+  'grok-text-to-video': { type: 'video', file: 'grok-text-to-video-sm.mp4' },
+  'grok-image-to-video':{ type: 'video', file: 'grok-image-to-video-sm.mp4' },
+  'kling-2-6-i2v':      { type: 'video', file: 'kling-2-6-i2v-sm.mp4' },
+}
+
 const MODEL_COLORS: Record<string, string> = {
-  'nano-banana-pro': 'linear-gradient(135deg,#FAEEDA,#EF9F27)',
-  'nano-banana-2': 'linear-gradient(135deg,#FFF3E0,#FF9800)',
-  'seedream-4-5-edit': 'linear-gradient(135deg,#E8F5E9,#4CAF50)',
-  'seedream-5-lite': 'linear-gradient(135deg,#E1F5EE,#26A69A)',
-  'grok-text-to-image': 'linear-gradient(135deg,#F3E5F5,#AB47BC)',
-  'grok-image-to-image': 'linear-gradient(135deg,#FCE4EC,#EC407A)',
   'veo3-lite': 'linear-gradient(135deg,#E8F5E9,#66BB6A)',
   'veo3-fast': 'linear-gradient(135deg,#EAF3DE,#97C459)',
   'veo3-quality': 'linear-gradient(135deg,#E1F5EE,#1D9E75)',
   'kling-3-0': 'linear-gradient(135deg,#E3F2FD,#42A5F5)',
   'kling-2-6-i2v': 'linear-gradient(135deg,#E8EAF6,#5C6BC0)',
   'seedance-2': 'linear-gradient(135deg,#FFF3E0,#FFA726)',
-  'grok-text-to-video': 'linear-gradient(135deg,#F3E5F5,#BA68C8)',
   'grok-image-to-video': 'linear-gradient(135deg,#FCE4EC,#F06292)',
   'kling-3-0-motion': 'linear-gradient(135deg,#E3F2FD,#1E88E5)',
   'kling-2-6-motion': 'linear-gradient(135deg,#E8EAF6,#7986CB)',
   'kling-avatar': 'linear-gradient(135deg,#FFF8E1,#FFD54F)',
-  'suno-v4': 'linear-gradient(135deg,#EEEDFE,#7F77DD)',
-  'suno-v4-5': 'linear-gradient(135deg,#EEEDFE,#9C95F0)',
-  'suno-v5': 'linear-gradient(135deg,#E8EAF6,#5C6BC0)',
-  'suno-v5-5': 'linear-gradient(135deg,#26215C,#7F77DD)',
 }
 
 const TYPE_TABS = [
@@ -38,22 +44,46 @@ const TYPE_TABS = [
 ]
 
 function ModelCard({ model, selected, onSelect }: { model: ModelConfig; selected: boolean; onSelect: () => void }) {
+  const preview = MODEL_PREVIEWS[model.id]
+  const isMusic = model.type === 'MUSIC'
+
   return (
     <div className={`model-card ${selected ? 'model-card-selected' : ''}`} onClick={onSelect}>
-      <div style={{
-        height: 120, background: MODEL_COLORS[model.id] ?? 'var(--surface2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} style={{ opacity: 0.6 }}>
-          {model.type === 'IMAGE' ? <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></>
-           : model.type === 'VIDEO' ? <><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></>
-           : model.type === 'MUSIC' ? <><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>
-           : <><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></>}
-        </svg>
-      </div>
+      {preview?.type === 'video' ? (
+        <video
+          src={`${PREVIEW_BASE}/${preview.file}`}
+          loop muted playsInline autoPlay
+          style={{ width: '100%', height: 120, objectFit: 'cover' }}
+        />
+      ) : preview?.type === 'image' ? (
+        <img
+          src={`${PREVIEW_BASE}/${preview.file}`}
+          alt={model.name}
+          loading="lazy"
+          style={{ width: '100%', height: 120, objectFit: 'cover' }}
+        />
+      ) : isMusic ? (
+        <div className="music-waveform-bg" style={{ height: 120 }}>
+          <div className="waveform-bars">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.12}s` }} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          height: 120, background: MODEL_COLORS[model.id] ?? 'var(--surface2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} style={{ opacity: 0.6 }}>
+            {model.type === 'VIDEO' ? <><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></>
+             : <><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></>}
+          </svg>
+        </div>
+      )}
       <div className="model-card-overlay">
         <div className="model-card-name">{model.name}</div>
-        <div className="model-card-price">{model.tokensPerGeneration} · {model.description}</div>
+        <div className="model-card-price">{model.description}</div>
       </div>
       {selected && (
         <div style={{
