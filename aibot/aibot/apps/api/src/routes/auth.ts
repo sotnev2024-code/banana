@@ -86,5 +86,12 @@ export function sanitizeUser(user: any) {
     username: user.username,
     photoUrl: user.photoUrl,
     balance: user.balance,
+    totalSpent: user.totalSpent ?? 0,
+    referralCode: user.referralCode,
+    dailyStreak: user.dailyStreak ?? 0,
+    lastDailyAt: user.lastDailyAt?.toISOString() ?? null,
+    lang: user.lang ?? 'ru',
+    theme: user.theme ?? 'auto',
+    createdAt: user.createdAt?.toISOString(),
   }
 }

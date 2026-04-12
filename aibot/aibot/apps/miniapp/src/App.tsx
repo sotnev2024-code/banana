@@ -7,6 +7,12 @@ import HistoryPage from './pages/HistoryPage'
 import ProfilePage from './pages/ProfilePage'
 import PlansPage from './pages/PlansPage'
 import PaymentSuccessPage from './pages/PaymentSuccessPage'
+import TransactionsPage from './pages/TransactionsPage'
+import ReferralPage from './pages/ReferralPage'
+import AchievementsPage from './pages/AchievementsPage'
+import FavoritesPage from './pages/FavoritesPage'
+import SettingsPage from './pages/SettingsPage'
+import PromoPage from './pages/PromoPage'
 
 export default function App() {
   return (
@@ -21,6 +27,12 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/plans" element={<PlansPage />} />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
+            <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/referral" element={<ReferralPage />} />
+            <Route path="/achievements" element={<AchievementsPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/promo" element={<PromoPage />} />
           </Routes>
         </div>
         <BottomNav />

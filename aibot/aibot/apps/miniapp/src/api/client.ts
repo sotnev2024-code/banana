@@ -24,12 +24,16 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 
 // Auth
 export const authTelegram = (initData: string) =>
-  req<{ token: string; user: User; isNew: boolean }>('POST', '/auth/telegram', { initData })
+  req<{ token: string; user: UserFull; isNew: boolean }>('POST', '/auth/telegram', { initData })
 
 // Profile
-export const getMe = () => req<User>('GET', '/me')
+export const getMe = () => req<UserFull>('GET', '/me')
 export const getMyGenerations = (cursor?: string) =>
   req<PaginatedGenerations>('GET', `/me/generations${cursor ? `?cursor=${cursor}` : ''}`)
+export const getMyTransactions = () =>
+  req<Transaction[]>('GET', '/me/transactions')
+export const updateSettings = (settings: { lang?: string; theme?: string }) =>
+  req<UserFull>('PUT', '/me/settings', settings)
 
 // Feed
 export const getFeed = (type?: string, cursor?: string) => {
@@ -53,8 +57,36 @@ export const getPlans = () => req<Plan[]>('GET', '/plans')
 export const createPayment = (planId: string) =>
   req<{ paymentId: string; confirmationUrl: string }>('POST', '/payment/yukassa/create', { planId })
 
+// Daily bonus
+export const claimDailyBonus = () =>
+  req<{ tokens: number; streak: number; nextClaimAt: string }>('POST', '/me/daily')
+
+// Referral
+export const getReferralStats = () =>
+  req<{ code: string; count: number; earned: number; referrals: ReferralUser[] }>('GET', '/me/referrals')
+
+// Achievements
+export const getAchievements = () =>
+  req<{ unlocked: string[]; all: AchievementInfo[] }>('GET', '/me/achievements')
+
+// Favorites
+export const getFavorites = () =>
+  req<Generation[]>('GET', '/me/favorites')
+export const addFavorite = (generationId: string) =>
+  req<{ ok: boolean }>('POST', '/me/favorites', { generationId })
+export const removeFavorite = (generationId: string) =>
+  req<{ ok: boolean }>('DELETE', `/me/favorites/${generationId}`)
+
+// Promo codes
+export const redeemPromo = (code: string) =>
+  req<{ tokens: number; message: string }>('POST', '/me/promo', { code })
+
+// Stats
+export const getStats = () =>
+  req<UserStats>('GET', '/me/stats')
+
 // Types
-export interface User {
+export interface UserFull {
   id: string
   telegramId: string
   firstName: string
@@ -62,7 +94,17 @@ export interface User {
   username?: string
   photoUrl?: string
   balance: number
+  totalSpent: number
+  referralCode: string
+  dailyStreak: number
+  lastDailyAt?: string
+  lang: string
+  theme: string
+  createdAt: string
 }
+
+// Keep backward compat
+export type User = UserFull
 
 export interface Generation {
   id: string
@@ -74,6 +116,7 @@ export interface Generation {
   tokensSpent: number
   isPublic: boolean
   createdAt: string
+  isFavorited?: boolean
   user?: { firstName: string; username?: string; photoUrl?: string }
 }
 
@@ -89,4 +132,38 @@ export interface Plan {
   bonusTokens: number
   priceRub: number
   popular?: boolean
+}
+
+export interface Transaction {
+  id: string
+  amount: number
+  type: string
+  description: string
+  createdAt: string
+}
+
+export interface ReferralUser {
+  firstName: string
+  username?: string
+  createdAt: string
+}
+
+export interface AchievementInfo {
+  id: string
+  name: string
+  description: string
+  icon: string
+  category: string
+  threshold: number
+  reward: number
+  unlocked: boolean
+  unlockedAt?: string
+}
+
+export interface UserStats {
+  totalGenerations: number
+  byType: Record<string, number>
+  favoriteModel: string | null
+  totalSpent: number
+  memberSince: string
 }

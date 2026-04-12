@@ -17,15 +17,25 @@ model User {
   balance      Int           @default(0)
   totalSpent   Int           @default(0)
   isBlocked    Boolean       @default(false)
+  lang         String        @default("ru")
+  theme        String        @default("auto")
+  referralCode String        @unique @default(cuid())
   referrerId   String?
   referrer     User?         @relation("Referrals", fields: [referrerId], references: [id])
   referrals    User[]        @relation("Referrals")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  // Daily bonus
+  lastDailyAt  DateTime?
+  dailyStreak  Int           @default(0)
+
   generations  Generation[]
   transactions Transaction[]
   payments     Payment[]
+  favorites    Favorite[]
+  achievements UserAchievement[]
+  promoCodes   PromoCodeUsage[]
 }
 
 model Generation {
@@ -44,6 +54,8 @@ model Generation {
   errorMsg    String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  favorites   Favorite[]
 
   @@index([userId])
   @@index([type])
@@ -81,6 +93,64 @@ model Payment {
   @@index([externalId])
 }
 
+model Favorite {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  generationId String
+  generation   Generation @relation(fields: [generationId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, generationId])
+  @@index([userId])
+}
+
+model Achievement {
+  id          String            @id
+  name        String
+  description String
+  icon        String
+  category    String            @default("general")
+  threshold   Int               @default(1)
+  reward      Int               @default(0)
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model PromoCode {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  tokens      Int
+  maxUses     Int              @default(0)
+  usedCount   Int              @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  usages      PromoCodeUsage[]
+}
+
+model PromoCodeUsage {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, promoCodeId])
+}
+
 enum GenerationType {
   IMAGE
   VIDEO
@@ -102,6 +172,9 @@ enum TransactionType {
   BONUS
   REFUND
   REFERRAL
+  DAILY
+  PROMO
+  ACHIEVEMENT
 }
 
 enum PaymentProvider {

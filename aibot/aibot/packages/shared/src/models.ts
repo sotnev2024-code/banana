@@ -343,3 +343,46 @@ export const TOKEN_PLANS: TokenPlan[] = [
 export const getPlan = (id: string) => TOKEN_PLANS.find(p => p.id === id)
 export const REFERRAL_BONUS = 50 // tokens per referred user who made first purchase
 export const WELCOME_BONUS = 30  // tokens on /start
+
+// ─── Daily bonus ─────────────────────────────────────────────────────────────
+
+export const DAILY_BONUS = [5, 7, 10, 12, 15, 20, 30] // tokens per day (streak 1-7)
+export const getDailyBonus = (streak: number) => DAILY_BONUS[Math.min(streak, DAILY_BONUS.length - 1)]
+
+// ─── Achievements ────────────────────────────────────────────────────────────
+
+export interface AchievementDef {
+  id: string
+  name: string
+  description: string
+  icon: string
+  category: 'generation' | 'social' | 'spending' | 'streak'
+  threshold: number
+  reward: number // bonus tokens
+}
+
+export const ACHIEVEMENTS: AchievementDef[] = [
+  // Generation milestones
+  { id: 'first-gen',     name: 'Первый шаг',       description: 'Создайте первую генерацию',        icon: '🎨', category: 'generation', threshold: 1,   reward: 5  },
+  { id: 'gen-10',        name: 'Креативщик',        description: 'Создайте 10 генераций',            icon: '🔥', category: 'generation', threshold: 10,  reward: 15 },
+  { id: 'gen-50',        name: 'Мастер',            description: 'Создайте 50 генераций',            icon: '⭐', category: 'generation', threshold: 50,  reward: 50 },
+  { id: 'gen-100',       name: 'Легенда',           description: 'Создайте 100 генераций',           icon: '👑', category: 'generation', threshold: 100, reward: 100 },
+  { id: 'gen-500',       name: 'AI Гуру',           description: 'Создайте 500 генераций',           icon: '🏆', category: 'generation', threshold: 500, reward: 300 },
+
+  // Social
+  { id: 'first-ref',     name: 'Амбассадор',        description: 'Пригласите первого друга',          icon: '🤝', category: 'social',     threshold: 1,   reward: 20 },
+  { id: 'ref-5',         name: 'Нетворкер',         description: 'Пригласите 5 друзей',              icon: '🌐', category: 'social',     threshold: 5,   reward: 50 },
+  { id: 'ref-20',        name: 'Инфлюенсер',        description: 'Пригласите 20 друзей',             icon: '📢', category: 'social',     threshold: 20,  reward: 200 },
+
+  // Spending
+  { id: 'spend-100',     name: 'Инвестор',          description: 'Потратьте 100 токенов',            icon: '💰', category: 'spending',   threshold: 100,  reward: 10 },
+  { id: 'spend-1000',    name: 'Магнат',            description: 'Потратьте 1000 токенов',           icon: '💎', category: 'spending',   threshold: 1000, reward: 50 },
+  { id: 'spend-5000',    name: 'Олигарх',           description: 'Потратьте 5000 токенов',           icon: '🏛',  category: 'spending',   threshold: 5000, reward: 200 },
+
+  // Streak
+  { id: 'streak-3',      name: 'Стабильность',      description: 'Заходите 3 дня подряд',            icon: '📅', category: 'streak',    threshold: 3,   reward: 10 },
+  { id: 'streak-7',      name: 'Недельный марафон', description: 'Заходите 7 дней подряд',           icon: '🗓',  category: 'streak',    threshold: 7,   reward: 30 },
+  { id: 'streak-30',     name: 'Железная воля',     description: 'Заходите 30 дней подряд',          icon: '🔥', category: 'streak',    threshold: 30,  reward: 150 },
+]
+
+export const getAchievement = (id: string) => ACHIEVEMENTS.find(a => a.id === id)

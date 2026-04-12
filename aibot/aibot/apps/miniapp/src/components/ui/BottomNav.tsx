@@ -43,12 +43,13 @@ const tabs = [
   },
 ]
 
+const hiddenPaths = ['/plans', '/payment', '/transactions', '/referral', '/achievements', '/favorites', '/settings', '/promo']
+
 export function BottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const hiddenOn = ['/plans', '/payment']
-  if (hiddenOn.some(p => location.pathname.startsWith(p))) return null
+  if (hiddenPaths.some(p => location.pathname.startsWith(p))) return null
 
   return (
     <nav className="bottom-nav">
