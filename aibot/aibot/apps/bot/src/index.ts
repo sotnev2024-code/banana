@@ -3,9 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { Redis } from 'ioredis'
 import { startHandler } from './handlers/start'
 import { generateScene } from './scenes/generate'
-import { buyHandler } from './handlers/buy'
-import { profileHandler } from './handlers/profile'
-import { historyHandler } from './handlers/history'
+import { buyHandler, profileHandler, historyHandler } from './handlers/buy'
 import { subscribeToResults } from './handlers/results'
 
 export const prisma = new PrismaClient()

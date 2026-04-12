@@ -1,5 +1,5 @@
 import { Scenes, Markup } from 'telegraf'
-import type { SceneContext } from 'telegraf/typings/scenes'
+import type { SceneContext } from 'telegraf/scenes'
 import { prisma } from '../index'
 import { getModelsByType, getModel, MODELS } from '@aibot/shared'
 
