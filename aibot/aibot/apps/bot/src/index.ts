@@ -1,4 +1,5 @@
 import { Telegraf, session, Scenes } from 'telegraf'
+import type { SceneContext } from 'telegraf/scenes'
 import { PrismaClient } from '@prisma/client'
 import { Redis } from 'ioredis'
 import { startHandler } from './handlers/start'
@@ -9,7 +10,7 @@ import { subscribeToResults } from './handlers/results'
 export const prisma = new PrismaClient()
 export const redis = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: null })
 
-const bot = new Telegraf(process.env.BOT_TOKEN!)
+const bot = new Telegraf<SceneContext>(process.env.BOT_TOKEN!)
 
 const stage = new Scenes.Stage([generateScene])
 bot.use(session())
