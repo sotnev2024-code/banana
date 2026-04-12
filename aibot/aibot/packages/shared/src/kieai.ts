@@ -25,13 +25,20 @@ function headers() {
 }
 
 async function post(path: string, body: Record<string, unknown>): Promise<KieResponse> {
+  console.log(`[KIE] POST ${path}`, JSON.stringify(body))
   const res = await fetch(`${KIE_BASE}${path}`, {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`kie.ai HTTP ${res.status}: ${await res.text()}`)
-  return res.json()
+  if (!res.ok) {
+    const text = await res.text()
+    console.error(`[KIE] HTTP ${res.status}: ${text}`)
+    throw new Error(`kie.ai HTTP ${res.status}: ${text}`)
+  }
+  const json = await res.json() as KieResponse
+  console.log(`[KIE] Response: code=${json.code}, msg=${json.msg}`)
+  return json
 }
 
 async function get(path: string): Promise<KieResponse> {
