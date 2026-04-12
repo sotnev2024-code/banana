@@ -66,7 +66,7 @@ export async function generateRoutes(app: FastifyInstance) {
     })
 
     // Enqueue task
-    await generationQueue.add('generate', { generationId: generation.id, modelId, prompt, imageUrl }, {
+    await generationQueue.add('generate', { generationId: generation.id, modelId, prompt, imageUrl, settings }, {
       attempts: 1,
     })
 

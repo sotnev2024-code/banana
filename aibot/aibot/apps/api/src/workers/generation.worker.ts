@@ -1,6 +1,6 @@
 import { Worker, type ConnectionOptions } from 'bullmq'
 import { prisma } from '../index'
-import { generateImage, generateVideo, generateMusic, pollTask, getModel } from '@aibot/shared'
+import { generate, pollTask, getModel } from '@aibot/shared'
 
 const POLL_INTERVAL = 5000   // 5 sec
 const MAX_POLL_TIME = 600000 // 10 min timeout
@@ -43,26 +43,18 @@ export function startGenerationWorker(connection: ConnectionOptions) {
   const worker = new Worker(
     'generations',
     async (job) => {
-      const { generationId, modelId, prompt, imageUrl } = job.data
+      const { generationId, modelId, prompt, imageUrl, settings = {} } = job.data
       const model = getModel(modelId)
       if (!model) {
         await refundTokens(generationId)
-        return // don't throw — no retry
+        return
       }
 
       await prisma.generation.update({ where: { id: generationId }, data: { status: 'PROCESSING' } })
 
       let taskId: string
       try {
-        if (model.type === 'IMAGE' || model.type === 'MOTION') {
-          taskId = await (model.type === 'MOTION'
-            ? generateVideo(prompt, modelId, imageUrl)
-            : generateImage(prompt, modelId, imageUrl))
-        } else if (model.type === 'VIDEO') {
-          taskId = await generateVideo(prompt, modelId, imageUrl)
-        } else {
-          taskId = await generateMusic(prompt, modelId)
-        }
+        taskId = await generate(modelId, prompt, imageUrl, settings)
       } catch (err) {
         console.error(`Generation ${generationId} API error:`, err)
         await prisma.generation.update({ where: { id: generationId }, data: { status: 'FAILED', errorMsg: String(err) } })

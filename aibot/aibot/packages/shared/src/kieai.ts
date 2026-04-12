@@ -1,3 +1,5 @@
+import { getModel } from './models'
+
 const KIE_BASE = 'https://api.kie.ai/api/v1'
 
 interface KieResponse {
@@ -13,7 +15,6 @@ interface KieResponse {
 interface TaskResult {
   status: 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED'
   resultUrl?: string
-  thumbnailUrl?: string
 }
 
 function headers() {
@@ -39,107 +40,154 @@ async function get(path: string): Promise<KieResponse> {
   return res.json()
 }
 
-// ─── Image generation ─────────────────────────────────────────────────────────
+// ─── Unified generation ──────────────────────────────────────────────────────
 
-export async function generateImage(
+export async function generate(
+  modelId: string,
   prompt: string,
-  model: string,
   imageUrl?: string,
+  settings: Record<string, string | number | boolean> = {},
   callBackUrl?: string,
 ): Promise<string> {
-  // Map our model ids to kie.ai model strings
-  const modelMap: Record<string, string> = {
-    'midjourney-v7':    'midjourney',
-    'flux-kontext':     'flux-kontext-max',
-    'nano-banana-pro':  'nano-banana-pro',
-    'gpt-4o-image':     'gpt-4o-image',
-  }
+  const model = getModel(modelId)
+  if (!model) throw new Error(`Unknown model: ${modelId}`)
 
-  const endpoint = model === 'midjourney-v7' ? '/midjourney/imagine' : '/image/generate'
+  const endpoint = model.kieEndpoint
+  const kieModel = model.kieModel
+
+  // Build request body based on endpoint type
+  if (endpoint === '/veo/generate') {
+    return generateVeo(kieModel, prompt, imageUrl, settings, callBackUrl)
+  }
+  if (endpoint === '/generate') {
+    return generateSuno(kieModel, prompt, settings, callBackUrl)
+  }
+  // All /jobs/createTask models
+  return generateTask(kieModel, model.type, prompt, imageUrl, settings, callBackUrl)
+}
+
+// /jobs/createTask — most models (image, video, motion)
+async function generateTask(
+  kieModel: string,
+  type: string,
+  prompt: string,
+  imageUrl?: string,
+  settings: Record<string, string | number | boolean> = {},
+  callBackUrl?: string,
+): Promise<string> {
+  const input: Record<string, unknown> = { prompt }
+
+  // Apply settings
+  if (settings.aspect_ratio) input.aspect_ratio = String(settings.aspect_ratio)
+  if (settings.resolution) input.resolution = String(settings.resolution)
+  if (settings.quality) input.quality = String(settings.quality)
+  if (settings.output_format) input.output_format = String(settings.output_format)
+  if (settings.mode) input.mode = String(settings.mode)
+  if (settings.duration !== undefined) input.duration = Number(settings.duration)
+  if (settings.sound !== undefined) input.sound = settings.sound === true || settings.sound === 'true'
+  if (settings.generate_audio !== undefined) input.generate_audio = settings.generate_audio === true || settings.generate_audio === 'true'
+  if (settings.enable_pro !== undefined) input.enable_pro = settings.enable_pro === true || settings.enable_pro === 'true'
+  if (settings.character_orientation) input.character_orientation = String(settings.character_orientation)
+  if (settings.background_source) input.background_source = String(settings.background_source)
+  if (settings.nsfw_checker !== undefined) input.nsfw_checker = false
+  if (settings.web_search !== undefined) input.web_search = settings.web_search === true || settings.web_search === 'true'
+
+  // Image inputs
+  if (imageUrl) {
+    // Different models expect different field names
+    if (kieModel.includes('image-to-video') || kieModel.includes('seedance')) {
+      input.first_frame_url = imageUrl
+    } else if (kieModel.includes('image-to-image')) {
+      input.image_urls = [imageUrl]
+    } else if (kieModel.includes('motion-control')) {
+      input.input_urls = [imageUrl]
+    } else if (kieModel.includes('avatar')) {
+      input.image_url = imageUrl
+    } else {
+      input.image_input = [imageUrl]
+    }
+  }
 
   const body: Record<string, unknown> = {
-    prompt,
-    model: modelMap[model] ?? model,
-    callBackUrl,
+    model: kieModel,
+    input,
   }
-  if (imageUrl) body.imageUrl = imageUrl
+  if (callBackUrl) body.callBackUrl = callBackUrl
 
-  const res = await post(endpoint, body)
+  const res = await post('/jobs/createTask', body)
   if (res.code !== 200 || !res.data?.taskId) {
-    throw new Error(`kie.ai image error: ${res.msg}`)
+    throw new Error(`kie.ai error: ${res.msg}`)
   }
   return res.data.taskId
 }
 
-// ─── Video generation ─────────────────────────────────────────────────────────
-
-export async function generateVideo(
+// /veo/generate — Veo 3.x models
+async function generateVeo(
+  kieModel: string,
   prompt: string,
-  model: string,
   imageUrl?: string,
+  settings: Record<string, string | number | boolean> = {},
   callBackUrl?: string,
 ): Promise<string> {
-  const endpointMap: Record<string, string> = {
-    'veo3-fast':    '/veo/generate',
-    'veo3-quality': '/veo/generate',
-    'wan-2-6':      '/wan/generate',
-    'runway-aleph': '/runway/generate',
-  }
-
-  const kieModelMap: Record<string, string> = {
-    'veo3-fast':    'veo3_fast',
-    'veo3-quality': 'veo3',
-    'wan-2-6':      'wan2.6-t2v',
-    'runway-aleph': 'runway-aleph',
-  }
-
   const body: Record<string, unknown> = {
     prompt,
-    model: kieModelMap[model] ?? model,
-    aspect_ratio: '16:9',
-    callBackUrl,
+    model: kieModel,
   }
+
+  if (settings.aspect_ratio) body.aspect_ratio = String(settings.aspect_ratio)
   if (imageUrl) {
     body.imageUrls = [imageUrl]
     body.generationType = 'REFERENCE_2_VIDEO'
   }
+  if (callBackUrl) body.callBackUrl = callBackUrl
 
-  const endpoint = endpointMap[model] ?? '/video/generate'
-  const res = await post(endpoint, body)
+  const res = await post('/veo/generate', body)
   if (res.code !== 200 || !res.data?.taskId) {
-    throw new Error(`kie.ai video error: ${res.msg}`)
+    throw new Error(`kie.ai veo error: ${res.msg}`)
   }
   return res.data.taskId
 }
 
-// ─── Music generation ─────────────────────────────────────────────────────────
-
-export async function generateMusic(
+// /generate — Suno music
+async function generateSuno(
+  kieModel: string,
   prompt: string,
-  model: string,
+  settings: Record<string, string | number | boolean> = {},
   callBackUrl?: string,
 ): Promise<string> {
-  const versionMap: Record<string, string> = {
-    'suno-v4-5':      'V4_5',
-    'suno-v4-5-plus': 'V4_5',
-  }
+  const customMode = settings.customMode === true || settings.customMode === 'true'
+  const instrumental = settings.instrumental === true || settings.instrumental === 'true'
 
   const body: Record<string, unknown> = {
     prompt,
-    model: 'chirp-v4-5',
-    mv: versionMap[model] ?? 'V4_5',
-    makeInstrumental: false,
-    callBackUrl,
+    model: kieModel,
+    customMode,
+    instrumental,
   }
 
-  const res = await post('/suno/generate', body)
+  if (customMode) {
+    if (settings.title) body.title = String(settings.title)
+    if (settings.style) body.style = String(settings.style)
+  }
+
+  if (callBackUrl) body.callBackUrl = callBackUrl
+
+  const res = await post('/generate', body)
   if (res.code !== 200 || !res.data?.taskId) {
     throw new Error(`kie.ai music error: ${res.msg}`)
   }
   return res.data.taskId
 }
 
-// ─── Poll task status ─────────────────────────────────────────────────────────
+// Keep old exports for backward compat
+export const generateImage = (prompt: string, model: string, imageUrl?: string, callBackUrl?: string) =>
+  generate(model, prompt, imageUrl, {}, callBackUrl)
+export const generateVideo = (prompt: string, model: string, imageUrl?: string, callBackUrl?: string) =>
+  generate(model, prompt, imageUrl, {}, callBackUrl)
+export const generateMusic = (prompt: string, model: string, callBackUrl?: string) =>
+  generate(model, prompt, undefined, {}, callBackUrl)
+
+// ─── Poll task status ────────────────────────────────────────────────────────
 
 export async function pollTask(taskId: string): Promise<TaskResult> {
   const res = await get(`/task/${taskId}`)
@@ -151,10 +199,8 @@ export async function pollTask(taskId: string): Promise<TaskResult> {
   const kieStatus = (data.status ?? '').toUpperCase()
 
   if (kieStatus === 'SUCCESS' || kieStatus === 'DONE') {
-    // Extract result URL from nested response depending on type
     const resp = data.response as Record<string, unknown> | undefined
-    const resultUrl = extractResultUrl(resp)
-    return { status: 'DONE', resultUrl }
+    return { status: 'DONE', resultUrl: extractResultUrl(resp) }
   }
 
   if (kieStatus === 'FAILED' || kieStatus === 'ERROR') {
@@ -170,15 +216,15 @@ export async function pollTask(taskId: string): Promise<TaskResult> {
 
 function extractResultUrl(resp?: Record<string, unknown>): string | undefined {
   if (!resp) return undefined
-  // Image: resp.imageUrl or resp.imageUrls[0]
   if (typeof resp.imageUrl === 'string') return resp.imageUrl
   if (Array.isArray(resp.imageUrls) && resp.imageUrls.length > 0) return resp.imageUrls[0]
-  // Video: resp.videoUrl
   if (typeof resp.videoUrl === 'string') return resp.videoUrl
-  // Suno: resp.sunoData[0].audioUrl
   if (Array.isArray(resp.sunoData) && resp.sunoData.length > 0) {
     const track = resp.sunoData[0] as Record<string, unknown>
     if (typeof track.audioUrl === 'string') return track.audioUrl
   }
+  // Generic fallback
+  if (typeof resp.url === 'string') return resp.url
+  if (typeof resp.resultUrl === 'string') return resp.resultUrl
   return undefined
 }
