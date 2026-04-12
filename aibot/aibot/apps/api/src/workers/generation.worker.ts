@@ -52,6 +52,8 @@ export function startGenerationWorker(connection: ConnectionOptions) {
 
       await prisma.generation.update({ where: { id: generationId }, data: { status: 'PROCESSING' } })
 
+      console.log(`Generation ${generationId}: model=${modelId}, settings=${JSON.stringify(settings)}`)
+
       let taskId: string
       try {
         taskId = await generate(modelId, prompt, imageUrl, settings)
