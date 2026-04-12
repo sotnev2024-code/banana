@@ -192,7 +192,7 @@ function ViewerSlide({ item, detail, isActive, showComments, onToggleComments, o
           <svg width="28" height="28" viewBox="0 0 24 24" fill={isFav ? '#fff' : 'none'} stroke="#fff" strokeWidth={1.8}>
             <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
           </svg>
-          <span className="viewer-action-label">{isFav ? t('detail.removeFavorite').split(' ')[0] : ''}</span>
+          <span className="viewer-action-label"></span>
         </button>
 
         {/* Try prompt */}
