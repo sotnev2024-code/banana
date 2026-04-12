@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../index'
 import { TOKEN_PLANS, getDailyBonus, ACHIEVEMENTS, REFERRAL_BONUS } from '@aibot/shared'
 import { sanitizeUser } from './auth'
+import { checkAchievements } from '../achievements'
 
 export async function plansRoutes(app: FastifyInstance) {
   app.get('/', async (_req, reply) => {
@@ -99,6 +100,9 @@ export async function profileRoutes(app: FastifyInstance) {
     const nextClaimAt = new Date()
     nextClaimAt.setDate(nextClaimAt.getDate() + 1)
     nextClaimAt.setHours(0, 0, 0, 0)
+
+    // Check streak achievements
+    await checkAchievements(userId)
 
     return reply.send({ tokens, streak: newStreak, nextClaimAt: nextClaimAt.toISOString() })
   })

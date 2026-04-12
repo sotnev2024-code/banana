@@ -1,6 +1,7 @@
 import { Worker, type ConnectionOptions } from 'bullmq'
 import { prisma } from '../index'
 import { generate, pollTask, getModel } from '@aibot/shared'
+import { checkAchievements } from '../achievements'
 
 const POLL_INTERVAL = 5000   // 5 sec
 const MAX_POLL_TIME = 600000 // 10 min timeout
@@ -94,6 +95,12 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         where: { id: generationId },
         data: { status: 'DONE', resultUrl: localUrl },
       })
+
+      // Check achievements
+      try {
+        const genData = await prisma.generation.findUnique({ where: { id: generationId }, select: { userId: true } })
+        if (genData) await checkAchievements(genData.userId)
+      } catch {}
 
       // Send result to user via Telegram
       try {

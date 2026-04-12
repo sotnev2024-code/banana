@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import crypto from 'crypto'
 import { prisma } from '../index'
 import { getPlan } from '@aibot/shared'
+import { checkAchievements } from '../achievements'
 
 const YUKASSA_API = 'https://api.yookassa.ru/v3'
 
@@ -93,6 +94,9 @@ export async function paymentRoutes(app: FastifyInstance) {
         },
       }),
     ])
+
+    // Check achievements (spending milestones)
+    await checkAchievements(payment.userId)
 
     // Notify user via bot
     const user = await prisma.user.findUnique({ where: { id: payment.userId } })

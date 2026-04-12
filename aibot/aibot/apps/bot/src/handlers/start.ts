@@ -1,7 +1,7 @@
 import type { Context } from 'telegraf'
 import { Markup } from 'telegraf'
 import { prisma } from '../index'
-import { WELCOME_BONUS } from '@aibot/shared'
+import { WELCOME_BONUS, REFERRAL_BONUS } from '@aibot/shared'
 
 export async function startHandler(ctx: Context) {
   const tg = ctx.from!
@@ -9,6 +9,18 @@ export async function startHandler(ctx: Context) {
 
   const existing = await prisma.user.findUnique({ where: { telegramId } })
   const isNew = !existing
+
+  // Parse deep link payload (ref_XXXX or buy_XXXX)
+  const payload = (ctx.message as any)?.text?.split(' ')[1] ?? ''
+  let referrerId: string | null = null
+
+  if (isNew && payload.startsWith('ref_')) {
+    const refCode = payload.slice(4)
+    const referrer = await prisma.user.findUnique({ where: { referralCode: refCode } })
+    if (referrer && referrer.telegramId !== telegramId) {
+      referrerId = referrer.id
+    }
+  }
 
   const user = await prisma.user.upsert({
     where: { telegramId },
@@ -19,36 +31,61 @@ export async function startHandler(ctx: Context) {
       lastName: tg.last_name ?? null,
       username: tg.username ?? null,
       balance: WELCOME_BONUS,
+      referrerId,
     },
   })
 
   if (isNew) {
     await prisma.transaction.create({
-      data: { userId: user.id, amount: WELCOME_BONUS, type: 'BONUS', description: 'Приветственный бонус' },
+      data: { userId: user.id, amount: WELCOME_BONUS, type: 'BONUS', description: 'Welcome bonus' },
     })
+
+    // Credit referrer
+    if (referrerId) {
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: referrerId },
+          data: { balance: { increment: REFERRAL_BONUS } },
+        }),
+        prisma.transaction.create({
+          data: { userId: referrerId, amount: REFERRAL_BONUS, type: 'REFERRAL', description: `Referral: ${tg.first_name}` },
+        }),
+      ])
+
+      // Notify referrer
+      try {
+        const referrer = await prisma.user.findUnique({ where: { id: referrerId } })
+        if (referrer) {
+          await ctx.telegram.sendMessage(
+            referrer.telegramId.toString(),
+            `+${REFERRAL_BONUS} tokens — ${tg.first_name} joined via your link!`,
+          )
+        }
+      } catch {}
+    }
   }
 
-  const welcomeText = isNew
-    ? `👋 Привет, <b>${tg.first_name}</b>!\n\nДобро пожаловать в AI-студию.\nТебе начислено <b>${WELCOME_BONUS} токенов</b> 🎁\n\nВыбери что хочешь создать:`
-    : `👋 С возвращением, <b>${tg.first_name}</b>!\n\n🪙 Баланс: <b>${user.balance} токенов</b>\n\nЧто создаём сегодня?`
-
   const miniAppUrl = process.env.MINIAPP_URL!
+
+  const welcomeText = isNew
+    ? `<b>${tg.first_name}</b>, welcome to PicPulse AI Studio!\n\n+${WELCOME_BONUS} tokens credited.`
+    : `<b>${tg.first_name}</b>, welcome back!\n\nBalance: <b>${user.balance} tokens</b>`
 
   await ctx.replyWithHTML(
     welcomeText,
     Markup.inlineKeyboard([
-      [Markup.button.webApp('🚀 Открыть студию', miniAppUrl)],
+      [Markup.button.webApp('Open Studio', miniAppUrl)],
       [
-        Markup.button.callback('🖼 Фото',  'cat:image'),
-        Markup.button.callback('🎬 Видео', 'cat:video'),
+        Markup.button.callback('Photo',  'cat:image'),
+        Markup.button.callback('Video', 'cat:video'),
       ],
       [
-        Markup.button.callback('🎵 Музыка',  'cat:music'),
-        Markup.button.callback('🎥 Motion',  'cat:motion'),
+        Markup.button.callback('Music',  'cat:music'),
+        Markup.button.callback('Motion',  'cat:motion'),
       ],
       [
-        Markup.button.callback('💰 Купить токены', 'cat:buy'),
-        Markup.button.callback('👤 Профиль', 'cat:profile'),
+        Markup.button.callback('Buy tokens', 'cat:buy'),
+        Markup.button.callback('Profile', 'cat:profile'),
       ],
     ]),
   )
