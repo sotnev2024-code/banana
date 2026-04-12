@@ -9,9 +9,13 @@ async function waitForResult(taskId: string): Promise<{ resultUrl: string } | nu
   const deadline = Date.now() + MAX_POLL_TIME
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, POLL_INTERVAL))
-    const result = await pollTask(taskId)
-    if (result.status === 'DONE' && result.resultUrl) return { resultUrl: result.resultUrl }
-    if (result.status === 'FAILED') return null
+    try {
+      const result = await pollTask(taskId)
+      if (result.status === 'DONE' && result.resultUrl) return { resultUrl: result.resultUrl }
+      if (result.status === 'FAILED') return null
+    } catch {
+      // poll error, retry
+    }
   }
   return null // timeout
 }
@@ -19,8 +23,17 @@ async function waitForResult(taskId: string): Promise<{ resultUrl: string } | nu
 async function refundTokens(generationId: string) {
   const gen = await prisma.generation.findUnique({ where: { id: generationId } })
   if (!gen || gen.status === 'REFUNDED') return
+
+  // Atomic: only refund if status is not already REFUNDED
+  const updated = await prisma.generation.updateMany({
+    where: { id: generationId, status: { not: 'REFUNDED' } },
+    data: { status: 'REFUNDED' },
+  })
+
+  // If no rows updated, someone else already refunded
+  if (updated.count === 0) return
+
   await prisma.$transaction([
-    prisma.generation.update({ where: { id: generationId }, data: { status: 'REFUNDED' } }),
     prisma.user.update({ where: { id: gen.userId }, data: { balance: { increment: gen.tokensSpent }, totalSpent: { decrement: gen.tokensSpent } } }),
     prisma.transaction.create({ data: { userId: gen.userId, amount: gen.tokensSpent, type: 'REFUND', description: 'Возврат — ошибка генерации' } }),
   ])
@@ -32,7 +45,10 @@ export function startGenerationWorker(connection: ConnectionOptions) {
     async (job) => {
       const { generationId, modelId, prompt, imageUrl } = job.data
       const model = getModel(modelId)
-      if (!model) throw new Error(`Unknown model: ${modelId}`)
+      if (!model) {
+        await refundTokens(generationId)
+        return // don't throw — no retry
+      }
 
       await prisma.generation.update({ where: { id: generationId }, data: { status: 'PROCESSING' } })
 
@@ -48,9 +64,10 @@ export function startGenerationWorker(connection: ConnectionOptions) {
           taskId = await generateMusic(prompt, modelId)
         }
       } catch (err) {
+        console.error(`Generation ${generationId} API error:`, err)
         await prisma.generation.update({ where: { id: generationId }, data: { status: 'FAILED', errorMsg: String(err) } })
         await refundTokens(generationId)
-        throw err
+        return // don't throw — no retry
       }
 
       await prisma.generation.update({ where: { id: generationId }, data: { kieTaskId: taskId } })
@@ -68,9 +85,19 @@ export function startGenerationWorker(connection: ConnectionOptions) {
       })
 
       // Notify via bot (publish to Redis pub/sub)
-      await (connection as any).publish?.('generation:done', JSON.stringify({ generationId }))
+      try {
+        await (connection as any).publish?.('generation:done', JSON.stringify({ generationId }))
+      } catch {}
     },
-    { connection, concurrency: 5 },
+    {
+      connection,
+      concurrency: 5,
+      defaultJobOptions: {
+        attempts: 1,        // no retries — refund handles failures
+        removeOnComplete: 100,
+        removeOnFail: 100,
+      },
+    },
   )
 
   worker.on('failed', (job, err) => {
