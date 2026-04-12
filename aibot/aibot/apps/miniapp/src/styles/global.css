@@ -561,6 +561,24 @@ img, video { display: block; max-width: 100%; }
   border-color: var(--accent);
 }
 
+/* Toast */
+.toast {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 999;
+  backdrop-filter: blur(8px);
+  animation: toastIn 0.2s ease-out, toastOut 0.3s ease-in 1.7s forwards;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
 /* TikTok-style viewer */
 .viewer-container {
   position: fixed;

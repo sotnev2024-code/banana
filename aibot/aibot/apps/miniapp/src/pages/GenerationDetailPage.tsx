@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getFeed, getFeedItem, toggleLike, addFavorite, removeFavorite, addComment, reportGeneration, type Generation, type GenerationDetail, type CommentItem } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { t } from '../i18n'
+import { toast } from '../components/ui/Toast'
 
 export default function GenerationDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -245,7 +246,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
         {/* Report */}
         <button className="viewer-action-btn" onClick={() => {
           if (reported) {
-            window.Telegram?.WebApp?.showAlert?.(t('detail.reported')) ?? alert(t('detail.reported'))
+            toast(t('detail.reported'))
             return
           }
           setShowReport(true)
@@ -357,7 +358,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
                 setReportSending(false)
                 setReportReason('')
                 setReportComment('')
-                window.Telegram?.WebApp?.showAlert?.(t('detail.reported')) ?? alert(t('detail.reported'))
+                toast(t('detail.reported'))
               }}
             >
               {reportSending ? '...' : t('detail.reportSend')}

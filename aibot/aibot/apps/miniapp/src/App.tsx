@@ -13,6 +13,7 @@ import AchievementsPage from './pages/AchievementsPage'
 import FavoritesPage from './pages/FavoritesPage'
 import SettingsPage from './pages/SettingsPage'
 import PromoPage from './pages/PromoPage'
+import { ToastProvider } from './components/ui/Toast'
 import GenerationDetailPage from './pages/GenerationDetailPage'
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
           </Routes>
         </div>
         <BottomNav />
+        <ToastProvider />
       </div>
     </AuthProvider>
   )
