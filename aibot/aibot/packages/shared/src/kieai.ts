@@ -197,35 +197,60 @@ export const generateMusic = (prompt: string, model: string, callBackUrl?: strin
 // ─── Poll task status ────────────────────────────────────────────────────────
 
 export async function pollTask(taskId: string): Promise<TaskResult> {
-  const res = await get(`/task/${taskId}`)
-  if (res.code !== 200) throw new Error(`kie.ai poll error: ${res.msg}`)
+  // Try /jobs/recordInfo first (for /jobs/createTask models)
+  const res = await get(`/jobs/recordInfo?taskId=${taskId}`)
+  if (res.code !== 200) {
+    // Fallback to /task/ endpoint (for veo/suno)
+    const res2 = await get(`/task/${taskId}`)
+    if (res2.code !== 200) throw new Error(`kie.ai poll error: ${res2.msg}`)
+    return parsePollResponse(res2.data)
+  }
+  return parsePollResponse(res.data)
+}
 
-  const data = res.data
+function parsePollResponse(data: any): TaskResult {
   if (!data) return { status: 'PENDING' }
 
-  const kieStatus = (data.status ?? '').toUpperCase()
+  const state = (data.state ?? data.status ?? '').toLowerCase()
 
-  if (kieStatus === 'SUCCESS' || kieStatus === 'DONE') {
-    const resp = data.response as Record<string, unknown> | undefined
-    return { status: 'DONE', resultUrl: extractResultUrl(resp) }
+  if (state === 'success' || state === 'done') {
+    // resultJson may be a string that needs parsing
+    let resultUrl: string | undefined
+    if (typeof data.resultJson === 'string') {
+      try {
+        const parsed = JSON.parse(data.resultJson)
+        resultUrl = extractResultUrl(parsed)
+      } catch {
+        resultUrl = undefined
+      }
+    } else if (data.response) {
+      resultUrl = extractResultUrl(data.response as Record<string, unknown>)
+    }
+    return { status: 'DONE', resultUrl }
   }
 
-  if (kieStatus === 'FAILED' || kieStatus === 'ERROR') {
+  if (state === 'fail' || state === 'failed' || state === 'error') {
     return { status: 'FAILED' }
   }
 
-  if (kieStatus === 'PROCESSING' || kieStatus === 'RUNNING') {
+  if (state === 'generating' || state === 'processing' || state === 'running') {
     return { status: 'PROCESSING' }
   }
 
+  // waiting, queuing
   return { status: 'PENDING' }
 }
 
 function extractResultUrl(resp?: Record<string, unknown>): string | undefined {
   if (!resp) return undefined
+  // resultUrls array (from recordInfo)
+  if (Array.isArray(resp.resultUrls) && resp.resultUrls.length > 0) return resp.resultUrls[0]
+  // Image
   if (typeof resp.imageUrl === 'string') return resp.imageUrl
   if (Array.isArray(resp.imageUrls) && resp.imageUrls.length > 0) return resp.imageUrls[0]
+  // Video
   if (typeof resp.videoUrl === 'string') return resp.videoUrl
+  // Music
   if (Array.isArray(resp.sunoData) && resp.sunoData.length > 0) {
     const track = resp.sunoData[0] as Record<string, unknown>
     if (typeof track.audioUrl === 'string') return track.audioUrl
