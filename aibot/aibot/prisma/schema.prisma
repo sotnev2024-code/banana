@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  telegramId   BigInt        @unique
+  username     String?
+  firstName    String
+  lastName     String?
+  photoUrl     String?
+  balance      Int           @default(0)
+  totalSpent   Int           @default(0)
+  isBlocked    Boolean       @default(false)
+  referrerId   String?
+  referrer     User?         @relation("Referrals", fields: [referrerId], references: [id])
+  referrals    User[]        @relation("Referrals")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  generations  Generation[]
+  transactions Transaction[]
+  payments     Payment[]
+}
+
+model Generation {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  type        GenerationType
+  model       String
+  prompt      String
+  imageUrl    String?
+  status      GenerationStatus @default(PENDING)
+  resultUrl   String?
+  kieTaskId   String?
+  tokensSpent Int
+  isPublic    Boolean          @default(true)
+  errorMsg    String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([isPublic, createdAt])
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  amount      Int
+  type        TransactionType
+  description String
+  createdAt   DateTime        @default(now())
+
+  @@index([userId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  amount        Int
+  currency      String        @default("RUB")
+  provider      PaymentProvider
+  status        PaymentStatus @default(PENDING)
+  externalId    String?       @unique
+  tokensGranted Int
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([externalId])
+}
+
+enum GenerationType {
+  IMAGE
+  VIDEO
+  MUSIC
+  MOTION
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  PURCHASE
+  SPEND
+  BONUS
+  REFUND
+  REFERRAL
+}
+
+enum PaymentProvider {
+  YUKASSA
+  STARS
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}

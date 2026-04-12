@@ -1,0 +1,20 @@
+{
+  "name": "@aibot/bot",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.ts"
+  },
+  "dependencies": {
+    "@aibot/shared": "*",
+    "@prisma/client": "^5.9.1",
+    "ioredis": "^5.3.2",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

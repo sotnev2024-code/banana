@@ -1,0 +1,24 @@
+{
+  "name": "aibot-monorepo",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w apps/api\" \"npm run dev -w apps/bot\" \"npm run dev -w apps/miniapp\"",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:bot": "npm run dev -w apps/bot",
+    "dev:miniapp": "npm run dev -w apps/miniapp",
+    "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/bot && npm run build -w apps/miniapp",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prisma": "^5.9.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.9.1"
+  }
+}
