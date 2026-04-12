@@ -161,6 +161,7 @@ export interface GenerationDetail extends Generation {
   likesCount: number
   commentsCount: number
   isLiked?: boolean
+  isReported?: boolean
   comments?: CommentItem[]
 }
 

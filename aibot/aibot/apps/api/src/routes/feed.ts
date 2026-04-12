@@ -68,17 +68,20 @@ export async function feedRoutes(app: FastifyInstance) {
 
     let isLiked = false
     let isFavorited = false
+    let isReported = false
     try {
       const authHeader = req.headers.authorization
       if (authHeader) {
         const decoded = await (req as any).jwtVerify().catch(() => null)
         if (decoded?.userId) {
-          const [like, fav] = await Promise.all([
+          const [like, fav, report] = await Promise.all([
             prisma.like.findUnique({ where: { userId_generationId: { userId: decoded.userId, generationId: id } } }),
             prisma.favorite.findUnique({ where: { userId_generationId: { userId: decoded.userId, generationId: id } } }),
+            prisma.report.findUnique({ where: { userId_generationId: { userId: decoded.userId, generationId: id } } }),
           ])
           isLiked = !!like
           isFavorited = !!fav
+          isReported = !!report
         }
       }
     } catch {}
@@ -89,6 +92,7 @@ export async function feedRoutes(app: FastifyInstance) {
       _count: undefined,
       isLiked,
       isFavorited,
+      isReported,
     })
   })
 

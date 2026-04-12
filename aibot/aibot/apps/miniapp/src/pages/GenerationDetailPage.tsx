@@ -138,6 +138,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
       setIsLiked(detail.isLiked ?? false)
       setLikesCount(detail.likesCount ?? 0)
       setIsFav(detail.isFavorited ?? false)
+      setReported(detail.isReported ?? false)
       setCommentsCount(detail.commentsCount ?? 0)
       setComments(detail.comments ?? [])
     }
