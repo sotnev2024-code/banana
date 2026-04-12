@@ -95,10 +95,18 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         data: { status: 'DONE', resultUrl: localUrl },
       })
 
-      // Notify via bot (publish to Redis pub/sub)
+      // Send result to user via Telegram
       try {
-        await (connection as any).publish?.('generation:done', JSON.stringify({ generationId }))
-      } catch {}
+        const gen = await prisma.generation.findUnique({
+          where: { id: generationId },
+          include: { user: true },
+        })
+        if (gen?.user) {
+          await sendResultToUser(gen, localUrl, result.resultUrl)
+        }
+      } catch (e) {
+        console.error('Failed to notify user:', e)
+      }
     },
     { connection, concurrency: 5 },
   )
@@ -108,4 +116,63 @@ export function startGenerationWorker(connection: ConnectionOptions) {
   })
 
   return worker
+}
+
+async function sendResultToUser(gen: any, localUrl: string, originalUrl: string) {
+  const BOT_TOKEN = process.env.BOT_TOKEN
+  if (!BOT_TOKEN) return
+
+  const chatId = gen.user.telegramId.toString()
+  const baseUrl = process.env.MINIAPP_URL ?? 'https://picpulse.fun'
+  const viewUrl = `${baseUrl}/generation/${gen.id}`
+
+  const typeLabel: Record<string, string> = {
+    IMAGE: 'Image', VIDEO: 'Video', MUSIC: 'Music', MOTION: 'Motion',
+  }
+
+  const caption = `${typeLabel[gen.type] ?? 'Generation'} — ${gen.model.replace(/-/g, ' ')}\n\n${gen.prompt.slice(0, 200)}`
+
+  const inlineKeyboard = JSON.stringify({
+    inline_keyboard: [
+      [{ text: 'HD', url: originalUrl }],
+      [{ text: 'Open in app', web_app: { url: viewUrl } }],
+    ],
+  })
+
+  const tgApi = `https://api.telegram.org/bot${BOT_TOKEN}`
+
+  if (gen.type === 'IMAGE') {
+    await fetch(`${tgApi}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: localUrl,
+        caption,
+        reply_markup: inlineKeyboard,
+      }),
+    })
+  } else if (gen.type === 'VIDEO' || gen.type === 'MOTION') {
+    await fetch(`${tgApi}/sendVideo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        video: localUrl,
+        caption,
+        reply_markup: inlineKeyboard,
+      }),
+    })
+  } else if (gen.type === 'MUSIC') {
+    await fetch(`${tgApi}/sendAudio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        audio: localUrl,
+        caption,
+        reply_markup: inlineKeyboard,
+      }),
+    })
+  }
 }
