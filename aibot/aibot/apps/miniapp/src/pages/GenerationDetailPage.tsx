@@ -243,7 +243,13 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
         </button>
 
         {/* Report */}
-        <button className="viewer-action-btn" onClick={() => !reported && setShowReport(true)} style={{ opacity: reported ? 0.3 : 0.5 }}>
+        <button className="viewer-action-btn" onClick={() => {
+          if (reported) {
+            window.Telegram?.WebApp?.showAlert?.(t('detail.reported')) ?? alert(t('detail.reported'))
+            return
+          }
+          setShowReport(true)
+        }} style={{ opacity: reported ? 0.3 : 0.5 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
           </svg>
@@ -351,6 +357,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
                 setReportSending(false)
                 setReportReason('')
                 setReportComment('')
+                window.Telegram?.WebApp?.showAlert?.(t('detail.reported')) ?? alert(t('detail.reported'))
               }}
             >
               {reportSending ? '...' : t('detail.reportSend')}
