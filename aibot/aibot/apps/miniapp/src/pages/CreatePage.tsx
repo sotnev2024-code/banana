@@ -4,7 +4,7 @@ import { MODELS, type ModelConfig, getModelsByType, calculatePrice } from '@aibo
 import { createGeneration, uploadFile } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { ModelSettings } from '../components/ui/ModelSettings'
-import { t } from '../i18n'
+import { t, getLang } from '../i18n'
 
 const PREVIEW_BASE = '/uploads/previews'
 
@@ -51,6 +51,7 @@ const TYPE_TABS = [
 function ModelCard({ model, selected, onSelect }: { model: ModelConfig; selected: boolean; onSelect: () => void }) {
   const preview = MODEL_PREVIEWS[model.id]
   const isMusic = model.type === 'MUSIC'
+  const desc = getLang() === 'en' && model.descriptionEn ? model.descriptionEn : model.description
 
   return (
     <div className={`model-card ${selected ? 'model-card-selected' : ''}`} onClick={onSelect}>
@@ -88,7 +89,7 @@ function ModelCard({ model, selected, onSelect }: { model: ModelConfig; selected
       )}
       <div className="model-card-overlay">
         <div className="model-card-name">{model.name}</div>
-        <div className="model-card-price">{model.description}</div>
+        <div className="model-card-price">{desc}</div>
       </div>
       {selected && (
         <div style={{
