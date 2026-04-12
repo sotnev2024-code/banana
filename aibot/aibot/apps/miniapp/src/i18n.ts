@@ -58,6 +58,9 @@ const translations = {
     'detail.commentPlaceholder': 'Написать комментарий...',
     'detail.send': 'Отправить',
     'detail.noComments': 'Пока нет комментариев',
+    'detail.report': 'Пожаловаться',
+    'detail.reported': 'Жалоба отправлена',
+    'detail.moderationBlock': 'Контент не прошёл модерацию',
 
     // History
     'history.title': 'История',
@@ -225,6 +228,9 @@ const translations = {
     'detail.commentPlaceholder': 'Write a comment...',
     'detail.send': 'Send',
     'detail.noComments': 'No comments yet',
+    'detail.report': 'Report',
+    'detail.reported': 'Report sent',
+    'detail.moderationBlock': 'Content did not pass moderation',
 
     // History
     'history.title': 'History',

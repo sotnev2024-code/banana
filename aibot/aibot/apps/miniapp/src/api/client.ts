@@ -75,6 +75,10 @@ export const getFeedItem = (id: string) =>
 export const toggleLike = (id: string) =>
   req<{ liked: boolean; likesCount: number }>('POST', `/feed/${id}/like`, {})
 
+// Report
+export const reportGeneration = (id: string, reason?: string) =>
+  req<{ ok: boolean }>('POST', `/feed/${id}/report`, { reason: reason ?? 'inappropriate' })
+
 // Comments
 export const getComments = (id: string) =>
   req<CommentItem[]>('GET', `/feed/${id}/comments`)

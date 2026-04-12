@@ -7,7 +7,7 @@ export async function feedRoutes(app: FastifyInstance) {
     const { cursor, type, limit = '20' } = req.query as Record<string, string>
     const take = Math.min(Number(limit), 50)
 
-    const where: Record<string, unknown> = { isPublic: true, status: 'DONE' }
+    const where: Record<string, unknown> = { isPublic: true, status: 'DONE', reportsCount: { lt: 3 } }
     if (type && type !== 'ALL') where.type = type
 
     const items = await prisma.generation.findMany({
@@ -116,6 +116,32 @@ export async function feedRoutes(app: FastifyInstance) {
       const gen = await prisma.generation.findUnique({ where: { id }, select: { likesCount: true } })
       return reply.send({ liked: true, likesCount: gen?.likesCount ?? 0 })
     }
+  })
+
+  // POST /feed/:id/report — report content
+  app.post('/:id/report', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const { id } = req.params as { id: string }
+    const { reason = 'inappropriate' } = (req.body as { reason?: string }) ?? {}
+
+    // Check if already reported
+    const existing = await prisma.report.findUnique({
+      where: { userId_generationId: { userId, generationId: id } },
+    })
+    if (existing) return reply.send({ ok: true, message: 'Already reported' })
+
+    await prisma.$transaction([
+      prisma.report.create({ data: { userId, generationId: id, reason } }),
+      prisma.generation.update({ where: { id }, data: { reportsCount: { increment: 1 } } }),
+    ])
+
+    // Auto-hide after 3 reports
+    const gen = await prisma.generation.findUnique({ where: { id }, select: { reportsCount: true } })
+    if (gen && gen.reportsCount >= 3) {
+      await prisma.generation.update({ where: { id }, data: { isPublic: false } })
+    }
+
+    return reply.send({ ok: true })
   })
 
   // GET /feed/:id/comments

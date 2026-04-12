@@ -84,6 +84,9 @@ async function generateTask(
 ): Promise<string> {
   const input: Record<string, unknown> = { prompt }
 
+  // Always enable NSFW checker
+  input.nsfw_checker = true
+
   // Apply settings
   if (settings.aspect_ratio) input.aspect_ratio = String(settings.aspect_ratio)
   if (settings.resolution) input.resolution = String(settings.resolution)

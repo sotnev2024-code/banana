@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { Queue } from 'bullmq'
 import { prisma, redis } from '../index'
 import { getModel, calculatePrice } from '@aibot/shared'
+import { moderatePrompt } from '../moderation'
 
 export const generationQueue = new Queue('generations', { connection: redis })
 
@@ -18,6 +19,12 @@ export async function generateRoutes(app: FastifyInstance) {
     }
 
     if (!prompt?.trim()) return reply.code(400).send({ error: 'prompt required' })
+
+    // Moderation check
+    const moderation = await moderatePrompt(prompt)
+    if (!moderation.allowed) {
+      return reply.code(403).send({ error: moderation.reason ?? 'Content not allowed' })
+    }
 
     const model = getModel(modelId)
     if (!model) return reply.code(400).send({ error: 'Unknown model' })

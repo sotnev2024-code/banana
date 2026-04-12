@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getFeed, getFeedItem, toggleLike, addFavorite, removeFavorite, addComment, type Generation, type GenerationDetail, type CommentItem } from '../api/client'
+import { getFeed, getFeedItem, toggleLike, addFavorite, removeFavorite, addComment, reportGeneration, type Generation, type GenerationDetail, type CommentItem } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { t } from '../i18n'
 
@@ -125,6 +125,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
   const [comments, setComments] = useState<CommentItem[]>([])
   const [commentsCount, setCommentsCount] = useState(0)
   const [commentText, setCommentText] = useState('')
+  const [reported, setReported] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -234,6 +235,17 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
         <button className="viewer-action-btn" onClick={onTryPrompt}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
             <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+          </svg>
+        </button>
+
+        {/* Report */}
+        <button className="viewer-action-btn" onClick={async () => {
+          if (reported) return
+          await reportGeneration(item.id).catch(() => {})
+          setReported(true)
+        }} style={{ opacity: reported ? 0.3 : 0.5 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
           </svg>
         </button>
       </div>

@@ -36,6 +36,7 @@ model User {
   favorites    Favorite[]
   likes        Like[]
   comments     Comment[]
+  reports      Report[]   @relation("ReportAuthor")
   achievements UserAchievement[]
   promoCodes   PromoCodeUsage[]
 }
@@ -58,14 +59,29 @@ model Generation {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  favorites   Favorite[]
-  likes       Like[]
-  comments    Comment[]
+  favorites    Favorite[]
+  likes        Like[]
+  comments     Comment[]
+  reports      Report[]
+  reportsCount Int              @default(0)
 
   @@index([userId])
   @@index([type])
   @@index([status])
   @@index([isPublic, createdAt])
+}
+
+model Report {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation("ReportAuthor", fields: [userId], references: [id])
+  generationId String
+  generation   Generation @relation(fields: [generationId], references: [id])
+  reason       String     @default("inappropriate")
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, generationId])
+  @@index([generationId])
 }
 
 model Like {
