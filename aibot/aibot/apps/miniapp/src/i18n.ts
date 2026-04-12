@@ -61,6 +61,16 @@ const translations = {
     'detail.report': 'Пожаловаться',
     'detail.reported': 'Жалоба отправлена',
     'detail.moderationBlock': 'Контент не прошёл модерацию',
+    'detail.reportTitle': 'Пожаловаться',
+    'detail.reportReason': 'Выберите причину',
+    'detail.reportComment': 'Комментарий (необязательно)',
+    'detail.reportSend': 'Отправить жалобу',
+    'report.sexual': 'Сексуальный контент',
+    'report.violence': 'Насилие / жестокость',
+    'report.hate': 'Разжигание ненависти',
+    'report.spam': 'Спам / реклама',
+    'report.copyright': 'Нарушение авторских прав',
+    'report.other': 'Другое',
 
     // History
     'history.title': 'История',
@@ -231,6 +241,16 @@ const translations = {
     'detail.report': 'Report',
     'detail.reported': 'Report sent',
     'detail.moderationBlock': 'Content did not pass moderation',
+    'detail.reportTitle': 'Report',
+    'detail.reportReason': 'Select a reason',
+    'detail.reportComment': 'Comment (optional)',
+    'detail.reportSend': 'Send report',
+    'report.sexual': 'Sexual content',
+    'report.violence': 'Violence / cruelty',
+    'report.hate': 'Hate speech',
+    'report.spam': 'Spam / advertising',
+    'report.copyright': 'Copyright violation',
+    'report.other': 'Other',
 
     // History
     'history.title': 'History',

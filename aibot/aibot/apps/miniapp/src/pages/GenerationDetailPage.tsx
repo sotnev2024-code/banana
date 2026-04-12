@@ -126,6 +126,10 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
   const [commentsCount, setCommentsCount] = useState(0)
   const [commentText, setCommentText] = useState('')
   const [reported, setReported] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportComment, setReportComment] = useState('')
+  const [reportSending, setReportSending] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -239,11 +243,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
         </button>
 
         {/* Report */}
-        <button className="viewer-action-btn" onClick={async () => {
-          if (reported) return
-          await reportGeneration(item.id).catch(() => {})
-          setReported(true)
-        }} style={{ opacity: reported ? 0.3 : 0.5 }}>
+        <button className="viewer-action-btn" onClick={() => !reported && setShowReport(true)} style={{ opacity: reported ? 0.3 : 0.5 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
           </svg>
@@ -294,6 +294,67 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report panel */}
+      {showReport && (
+        <div className="viewer-comments-panel">
+          <div className="viewer-comments-header">
+            <span>{t('detail.reportTitle')}</span>
+            <button onClick={() => setShowReport(false)} style={{ color: '#fff' }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round">
+                <path d="M4 4l12 12M16 4L4 16"/>
+              </svg>
+            </button>
+          </div>
+          <div className="viewer-comments-list" style={{ padding: '12px 16px' }}>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>{t('detail.reportReason')}</div>
+            {(['sexual', 'violence', 'hate', 'spam', 'copyright', 'other'] as const).map(r => (
+              <div
+                key={r}
+                onClick={() => setReportReason(r)}
+                style={{
+                  padding: '12px 14px', borderRadius: 10, marginBottom: 6, cursor: 'pointer',
+                  background: reportReason === r ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                  color: reportReason === r ? '#fff' : 'rgba(255,255,255,0.8)',
+                  fontSize: 14, transition: 'background 0.15s',
+                }}
+              >
+                {t(`report.${r}` as any)}
+              </div>
+            ))}
+            <textarea
+              value={reportComment}
+              onChange={e => setReportComment(e.target.value)}
+              placeholder={t('detail.reportComment')}
+              rows={2}
+              style={{
+                width: '100%', marginTop: 10, padding: '10px 12px', borderRadius: 10,
+                border: 'none', background: 'rgba(255,255,255,0.08)', color: '#fff',
+                fontSize: 13, resize: 'none', outline: 'none',
+              }}
+            />
+          </div>
+          <div style={{ padding: '10px 16px 16px' }}>
+            <button
+              className="btn-primary"
+              disabled={!reportReason || reportSending}
+              onClick={async () => {
+                if (!reportReason || reportSending) return
+                setReportSending(true)
+                const reason = `${reportReason}${reportComment ? ': ' + reportComment : ''}`
+                await reportGeneration(item.id, reason).catch(() => {})
+                setReported(true)
+                setShowReport(false)
+                setReportSending(false)
+                setReportReason('')
+                setReportComment('')
+              }}
+            >
+              {reportSending ? '...' : t('detail.reportSend')}
+            </button>
           </div>
         </div>
       )}
