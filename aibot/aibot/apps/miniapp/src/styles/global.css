@@ -272,16 +272,42 @@ img, video { display: block; max-width: 100%; }
   display: block;
   border-radius: var(--radius-md);
 }
-.feed-cell-badge {
+.feed-cell-footer {
   position: absolute;
   bottom: 6px;
   left: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.feed-cell-badge {
   background: rgba(0,0,0,0.55);
   color: #fff;
   font-size: 10px;
   padding: 2px 7px;
   border-radius: 6px;
   backdrop-filter: blur(4px);
+}
+.feed-cell-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(255,255,255,0.6);
+}
+.feed-cell-avatar-placeholder {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 600;
+  border: 1.5px solid rgba(255,255,255,0.6);
 }
 
 /* Upload zone */

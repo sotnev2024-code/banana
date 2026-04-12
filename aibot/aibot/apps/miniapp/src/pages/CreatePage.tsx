@@ -85,6 +85,7 @@ export default function CreatePage() {
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [genId, setGenId] = useState<string | null>(null)
+  const [isPublic, setIsPublic] = useState(true)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const models = getModelsByType(type as any)
@@ -141,7 +142,7 @@ export default function CreatePage() {
     const fullPrompt = prompt
     setGenState('loading'); setError('')
     try {
-      const gen = await createGeneration({ model: selectedModel, prompt: fullPrompt, imageUrl: imageUrl ?? undefined, settings: modelSettings })
+      const gen = await createGeneration({ model: selectedModel, prompt: fullPrompt, imageUrl: imageUrl ?? undefined, isPublic, settings: modelSettings })
       setGenId(gen.id); setGenState('polling')
     } catch (err: any) {
       setError(err.message ?? 'Error'); setGenState('error')
@@ -238,6 +239,18 @@ export default function CreatePage() {
 
         <textarea className="prompt-area" placeholder={t('create.promptPlaceholder')}
           value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} />
+
+        {/* Publish toggle */}
+        <div className="setting-toggle-row" onClick={() => setIsPublic(!isPublic)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{t('create.publishToFeed')}</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{t('create.publishDesc')}</div>
+          </div>
+          <div className={`setting-toggle ${isPublic ? 'on' : ''}`}>
+            <div className="setting-toggle-knob" />
+          </div>
+        </div>
 
         {error && (
           <div style={{ padding: '10px 14px', background: '#fcebeb', borderRadius: 10, fontSize: 13, color: '#a32d2d' }}>{error}</div>

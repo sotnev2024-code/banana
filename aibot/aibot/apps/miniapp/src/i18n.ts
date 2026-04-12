@@ -31,6 +31,8 @@ const translations = {
     'create.selectModel': 'Сначала выберите модель.',
     'create.insufficientTokens': 'Недостаточно токенов. Нужно {required}, есть {balance}',
     'create.genError': 'Ошибка генерации. Токены возвращены.',
+    'create.publishToFeed': 'Опубликовать в ленту',
+    'create.publishDesc': 'Другие пользователи увидят ваш результат',
     'create.styles.realism': 'реализм',
     'create.styles.anime': 'аниме',
     'create.styles.art': 'арт',
@@ -38,6 +40,20 @@ const translations = {
     'create.styles.cinema': 'кино',
     'create.styles.minimal': 'минимализм',
     'create.styles.watercolor': 'акварель',
+
+    // Detail
+    'detail.prompt': 'Промпт',
+    'detail.model': 'Модель',
+    'detail.type': 'Тип',
+    'detail.settings': 'Настройки',
+    'detail.reference': 'Референс',
+    'detail.author': 'Автор',
+    'detail.date': 'Дата',
+    'detail.cost': 'Стоимость',
+    'detail.download': 'Скачать',
+    'detail.tryPrompt': 'Попробовать промпт',
+    'detail.addFavorite': 'В избранное',
+    'detail.removeFavorite': 'Из избранного',
 
     // History
     'history.title': 'История',
@@ -177,6 +193,8 @@ const translations = {
     'create.selectModel': 'Select a model first.',
     'create.insufficientTokens': 'Not enough tokens. Need {required}, have {balance}',
     'create.genError': 'Generation error. Tokens refunded.',
+    'create.publishToFeed': 'Publish to feed',
+    'create.publishDesc': 'Other users will see your result',
     'create.styles.realism': 'realism',
     'create.styles.anime': 'anime',
     'create.styles.art': 'art',
@@ -184,6 +202,20 @@ const translations = {
     'create.styles.cinema': 'cinema',
     'create.styles.minimal': 'minimal',
     'create.styles.watercolor': 'watercolor',
+
+    // Detail
+    'detail.prompt': 'Prompt',
+    'detail.model': 'Model',
+    'detail.type': 'Type',
+    'detail.settings': 'Settings',
+    'detail.reference': 'Reference',
+    'detail.author': 'Author',
+    'detail.date': 'Date',
+    'detail.cost': 'Cost',
+    'detail.download': 'Download',
+    'detail.tryPrompt': 'Try this prompt',
+    'detail.addFavorite': 'Add to favorites',
+    'detail.removeFavorite': 'Remove from favorites',
 
     // History
     'history.title': 'History',

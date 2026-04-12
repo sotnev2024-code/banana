@@ -51,6 +51,9 @@ export const createGeneration = (body: { model: string; prompt: string; imageUrl
 export const getGeneration = (id: string) =>
   req<Generation>('GET', `/generate/${id}`)
 
+export const getFeedItem = (id: string) =>
+  req<GenerationDetail>('GET', `/feed/${id}`)
+
 // Plans
 export const getPlans = () => req<Plan[]>('GET', '/plans')
 
@@ -119,6 +122,11 @@ export interface Generation {
   createdAt: string
   isFavorited?: boolean
   user?: { firstName: string; username?: string; photoUrl?: string }
+}
+
+export interface GenerationDetail extends Generation {
+  imageUrl?: string
+  settings?: Record<string, string | number | boolean>
 }
 
 export interface PaginatedGenerations {

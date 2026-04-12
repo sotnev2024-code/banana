@@ -44,7 +44,7 @@ const tabs = [
   },
 ]
 
-const hiddenPaths = ['/plans', '/payment', '/transactions', '/referral', '/achievements', '/favorites', '/settings', '/promo']
+const hiddenPaths = ['/plans', '/payment', '/transactions', '/referral', '/achievements', '/favorites', '/settings', '/promo', '/generation']
 
 export function BottomNav() {
   const location = useLocation()

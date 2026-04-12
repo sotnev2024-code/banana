@@ -56,7 +56,17 @@ function FeedCard({ item, onClick }: { item: Generation; onClick: () => void }) 
       ) : (
         <div className="skeleton" style={{ height: 120 }} />
       )}
-      <div className="feed-cell-badge">{modelLabel}</div>
+      <div className="feed-cell-footer">
+        <div className="feed-cell-badge">{modelLabel}</div>
+        {item.user && (
+          <div className="feed-cell-author">
+            {item.user.photoUrl
+              ? <img src={item.user.photoUrl} alt="" className="feed-cell-avatar" />
+              : <div className="feed-cell-avatar-placeholder">{item.user.firstName[0]}</div>
+            }
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -128,7 +138,7 @@ export default function FeedPage() {
       <div className="feed-grid">
         {items.map(item => (
           <FeedCard key={item.id} item={item}
-            onClick={() => navigate('/create', { state: { prompt: item.prompt, model: item.model } })} />
+            onClick={() => navigate(`/generation/${item.id}`)} />
         ))}
         {loading && Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="feed-cell">

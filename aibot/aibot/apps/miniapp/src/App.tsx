@@ -13,6 +13,7 @@ import AchievementsPage from './pages/AchievementsPage'
 import FavoritesPage from './pages/FavoritesPage'
 import SettingsPage from './pages/SettingsPage'
 import PromoPage from './pages/PromoPage'
+import GenerationDetailPage from './pages/GenerationDetailPage'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/promo" element={<PromoPage />} />
+            <Route path="/generation/:id" element={<GenerationDetailPage />} />
           </Routes>
         </div>
         <BottomNav />
