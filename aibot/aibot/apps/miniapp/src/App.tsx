@@ -15,6 +15,7 @@ import SettingsPage from './pages/SettingsPage'
 import PromoPage from './pages/PromoPage'
 import { ToastProvider } from './components/ui/Toast'
 import GenerationDetailPage from './pages/GenerationDetailPage'
+import AdminPage from './pages/admin/AdminPage'
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/promo" element={<PromoPage />} />
             <Route path="/generation/:id" element={<GenerationDetailPage />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </div>
         <BottomNav />
