@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { MODELS, type ModelConfig, getModelsByType } from '@aibot/shared'
 import { createGeneration } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
+import { ModelSettings } from '../components/ui/ModelSettings'
 import { t } from '../i18n'
 
 const MODEL_COLORS: Record<string, string> = {
@@ -85,6 +86,7 @@ export default function CreatePage() {
   const [prompt, setPrompt] = useState(state?.prompt ?? '')
   const [style, setStyle] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [modelSettings, setModelSettings] = useState<Record<string, string | number | boolean>>({})
   const [genState, setGenState] = useState<GenState>('idle')
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -95,7 +97,22 @@ export default function CreatePage() {
 
   useEffect(() => {
     if (models.length > 0) setSelectedModel(models[0].id)
+    setModelSettings({})
   }, [type])
+
+  // Reset settings when model changes
+  useEffect(() => {
+    const m = MODELS.find(m => m.id === selectedModel)
+    if (m?.settings) {
+      const defaults: Record<string, string | number | boolean> = {}
+      for (const s of m.settings) {
+        if (s.defaultValue !== undefined) defaults[s.id] = s.defaultValue
+      }
+      setModelSettings(defaults)
+    } else {
+      setModelSettings({})
+    }
+  }, [selectedModel])
 
   useEffect(() => {
     if (state?.model) {
@@ -130,7 +147,7 @@ export default function CreatePage() {
     const fullPrompt = style ? `${prompt}, ${style} style` : prompt
     setGenState('loading'); setError('')
     try {
-      const gen = await createGeneration({ model: selectedModel, prompt: fullPrompt, imageUrl: imageUrl ?? undefined })
+      const gen = await createGeneration({ model: selectedModel, prompt: fullPrompt, imageUrl: imageUrl ?? undefined, settings: modelSettings })
       setGenId(gen.id); setGenState('polling')
     } catch (err: any) {
       setError(err.message ?? 'Error'); setGenState('error')
@@ -193,6 +210,17 @@ export default function CreatePage() {
             <ModelCard key={m.id} model={m} selected={selectedModel === m.id} onSelect={() => setSelectedModel(m.id)} />
           ))}
         </div>
+
+        {/* Model settings */}
+        {model?.settings && model.settings.length > 0 && (
+          <ModelSettings
+            settings={model.settings}
+            values={modelSettings}
+            onChange={(id, val) => setModelSettings(prev => ({ ...prev, [id]: val }))}
+            maxPromptLength={model.maxPromptLength}
+            promptLength={prompt.length}
+          />
+        )}
 
         {model?.supportsImageInput && (
           <>

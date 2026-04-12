@@ -45,7 +45,7 @@ export const getFeed = (type?: string, cursor?: string) => {
 }
 
 // Generate
-export const createGeneration = (body: { model: string; prompt: string; imageUrl?: string; isPublic?: boolean }) =>
+export const createGeneration = (body: { model: string; prompt: string; imageUrl?: string; isPublic?: boolean; settings?: Record<string, string | number | boolean> }) =>
   req<{ id: string; status: string }>('POST', '/generate', body)
 
 export const getGeneration = (id: string) =>

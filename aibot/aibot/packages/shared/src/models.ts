@@ -5,6 +5,18 @@ export type GenerationStatus = 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED' | 'R
 
 // ─── Model catalog ────────────────────────────────────────────────────────────
 
+export interface SettingOption {
+  id: string
+  type: 'select' | 'toggle' | 'slider' | 'text'
+  labelRu: string
+  labelEn: string
+  values?: string[]              // for select
+  defaultValue?: string | number | boolean
+  min?: number                   // for slider
+  max?: number                   // for slider
+  step?: number                  // for slider
+}
+
 export interface ModelConfig {
   id: string
   name: string
@@ -13,12 +25,14 @@ export interface ModelConfig {
   supportsImageInput: boolean
   description: string
   maxDuration?: number          // seconds, for video/motion
+  minDuration?: number          // seconds
   resolutions?: string[]        // available resolutions
   aspectRatios?: string[]       // supported aspect ratios
   maxPromptLength?: number      // max prompt chars
   pricingNote?: string          // pricing details
   kieModel: string              // actual model string for kie.ai API
   kieEndpoint: string           // API endpoint path
+  settings?: SettingOption[]    // configurable settings for this model
 }
 
 export const MODELS: ModelConfig[] = [
@@ -37,6 +51,11 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '18 cr ($0.09) 1K | 24 cr ($0.12) 2K/4K',
     kieModel: 'nano-banana-pro',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9', 'auto'], defaultValue: '1:1' },
+      { id: 'output_format', type: 'select', labelRu: 'Формат', labelEn: 'Format', values: ['png', 'jpg'], defaultValue: 'png' },
+    ],
   },
   {
     id: 'nano-banana-2',
@@ -51,6 +70,11 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '8 cr ($0.04) 1K | 12 cr ($0.06) 2K | 18 cr ($0.09) 4K',
     kieModel: 'nano-banana-2',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9', 'auto'], defaultValue: 'auto' },
+      { id: 'output_format', type: 'select', labelRu: 'Формат', labelEn: 'Format', values: ['png', 'jpg'], defaultValue: 'jpg' },
+    ],
   },
   {
     id: 'seedream-4-5-edit',
@@ -65,6 +89,10 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '6.5 cr ($0.0325) за генерацию',
     kieModel: 'seedream/4.5-edit',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['1:1', '4:3', '3:4', '16:9', '9:16', '2:3', '3:2'], defaultValue: '1:1' },
+      { id: 'quality', type: 'select', labelRu: 'Качество', labelEn: 'Quality', values: ['basic', 'high'], defaultValue: 'basic' },
+    ],
   },
   {
     id: 'seedream-5-lite',
@@ -79,6 +107,10 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '5.5 cr ($0.0275) за генерацию',
     kieModel: 'seedream/5-lite-text-to-image',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['1:1', '4:3', '3:4', '16:9', '9:16', '2:3', '3:2'], defaultValue: '1:1' },
+      { id: 'quality', type: 'select', labelRu: 'Качество', labelEn: 'Quality', values: ['basic', 'high'], defaultValue: 'basic' },
+    ],
   },
   {
     id: 'grok-text-to-image',
@@ -92,6 +124,10 @@ export const MODELS: ModelConfig[] = [
     pricingNote: 'Standard: 4 cr за 6шт | Quality: 5 cr за 4шт',
     kieModel: 'grok-imagine/text-to-image',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['1:1', '2:3', '3:2', '16:9', '9:16'], defaultValue: '1:1' },
+      { id: 'enable_pro', type: 'toggle', labelRu: 'Режим качества (4 шт)', labelEn: 'Quality mode (4 images)', defaultValue: false },
+    ],
   },
   {
     id: 'grok-image-to-image',
@@ -105,6 +141,7 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '4 cr ($0.02) за 2 изображения',
     kieModel: 'grok-imagine/image-to-image',
     kieEndpoint: '/jobs/createTask',
+    settings: [],
   },
 
   // ══════════════════════ VIDEO ══════════════════════
@@ -121,6 +158,9 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '30 cr ($0.15) за видео',
     kieModel: 'veo3_lite',
     kieEndpoint: '/veo/generate',
+    settings: [
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['16:9', '9:16', 'Auto'], defaultValue: '16:9' },
+    ],
   },
   {
     id: 'veo3-fast',
@@ -134,6 +174,9 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '60 cr ($0.30) за видео',
     kieModel: 'veo3_fast',
     kieEndpoint: '/veo/generate',
+    settings: [
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['16:9', '9:16', 'Auto'], defaultValue: '16:9' },
+    ],
   },
   {
     id: 'veo3-quality',
@@ -147,6 +190,9 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '250 cr ($1.25) за видео',
     kieModel: 'veo3',
     kieEndpoint: '/veo/generate',
+    settings: [
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['16:9', '9:16', 'Auto'], defaultValue: '16:9' },
+    ],
   },
   {
     id: 'kling-3-0',
@@ -156,25 +202,37 @@ export const MODELS: ModelConfig[] = [
     supportsImageInput: true,
     description: 'Мультишот, элементы, до 15 сек, аудио',
     maxDuration: 15,
+    minDuration: 3,
     maxPromptLength: 500,
     resolutions: ['720p', '1080p'],
     aspectRatios: ['16:9', '9:16', '1:1'],
-    pricingNote: 'Std: 14 cr/сек без аудио, 20 cr/сек с аудио | Pro: 18/27 cr/сек',
+    pricingNote: 'Std: 14 cr/сек | Pro: 18 cr/сек | +аудио: +6-9 cr/сек',
     kieModel: 'kling-3.0/video',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'mode', type: 'select', labelRu: 'Качество', labelEn: 'Quality', values: ['std', 'pro'], defaultValue: 'std' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['16:9', '9:16', '1:1'], defaultValue: '16:9' },
+      { id: 'duration', type: 'slider', labelRu: 'Длительность (сек)', labelEn: 'Duration (sec)', min: 3, max: 15, step: 1, defaultValue: 5 },
+      { id: 'sound', type: 'toggle', labelRu: 'Звук', labelEn: 'Sound', defaultValue: false },
+    ],
   },
   {
     id: 'kling-2-6-i2v',
-    name: 'Kling 2.6 Image→Video',
+    name: 'Kling 2.6 Image to Video',
     type: 'VIDEO',
     tokensPerGeneration: 55,
     supportsImageInput: true,
     description: 'Анимация фото в видео, 5-10 сек',
     maxDuration: 10,
+    minDuration: 5,
     maxPromptLength: 1000,
-    pricingNote: '5с: 55 cr ($0.28) | 10с: 110 cr ($0.55) | +аудио x2',
+    pricingNote: '5с: 55 cr | 10с: 110 cr | +аудио x2',
     kieModel: 'kling-2.6/image-to-video',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'duration', type: 'select', labelRu: 'Длительность', labelEn: 'Duration', values: ['5', '10'], defaultValue: '5' },
+      { id: 'sound', type: 'toggle', labelRu: 'Звук', labelEn: 'Sound', defaultValue: false },
+    ],
   },
   {
     id: 'seedance-2',
@@ -184,12 +242,19 @@ export const MODELS: ModelConfig[] = [
     supportsImageInput: true,
     description: 'ByteDance — аудио, мульти-референсы, 4-15 сек',
     maxDuration: 15,
+    minDuration: 4,
     maxPromptLength: 1536,
     resolutions: ['480p', '720p'],
     aspectRatios: ['1:1', '4:3', '3:4', '16:9', '9:16', '21:9', 'adaptive'],
     pricingNote: '480P: 11.5-19 cr/сек | 720P: 25-41 cr/сек',
     kieModel: 'bytedance/seedance-2',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['480p', '720p'], defaultValue: '720p' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['16:9', '9:16', '1:1', '4:3', '3:4', 'adaptive'], defaultValue: '16:9' },
+      { id: 'duration', type: 'slider', labelRu: 'Длительность (сек)', labelEn: 'Duration (sec)', min: 4, max: 15, step: 1, defaultValue: 8 },
+      { id: 'generate_audio', type: 'toggle', labelRu: 'Генерировать аудио', labelEn: 'Generate audio', defaultValue: true },
+    ],
   },
   {
     id: 'grok-text-to-video',
@@ -199,12 +264,19 @@ export const MODELS: ModelConfig[] = [
     supportsImageInput: false,
     description: 'xAI — до 30 сек видео, дёшево',
     maxDuration: 30,
+    minDuration: 6,
     maxPromptLength: 5000,
     resolutions: ['480p', '720p'],
     aspectRatios: ['2:3', '3:2', '1:1', '16:9', '9:16'],
     pricingNote: '480p: 1.6 cr/сек | 720p: 3 cr/сек',
     kieModel: 'grok-imagine/text-to-video',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['480p', '720p'], defaultValue: '480p' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['16:9', '9:16', '1:1', '2:3', '3:2'], defaultValue: '16:9' },
+      { id: 'duration', type: 'slider', labelRu: 'Длительность (сек)', labelEn: 'Duration (sec)', min: 6, max: 30, step: 1, defaultValue: 10 },
+      { id: 'mode', type: 'select', labelRu: 'Стиль', labelEn: 'Style', values: ['normal', 'fun', 'spicy'], defaultValue: 'normal' },
+    ],
   },
   {
     id: 'grok-image-to-video',
@@ -214,12 +286,18 @@ export const MODELS: ModelConfig[] = [
     supportsImageInput: true,
     description: 'xAI — анимация фото, до 30 сек, дёшево',
     maxDuration: 30,
+    minDuration: 6,
     maxPromptLength: 5000,
     resolutions: ['480p', '720p'],
     aspectRatios: ['2:3', '3:2', '1:1', '16:9', '9:16'],
     pricingNote: '480p: 1.6 cr/сек | 720p: 3 cr/сек',
     kieModel: 'grok-imagine/image-to-video',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['480p', '720p'], defaultValue: '480p' },
+      { id: 'duration', type: 'slider', labelRu: 'Длительность (сек)', labelEn: 'Duration (sec)', min: 6, max: 30, step: 1, defaultValue: 10 },
+      { id: 'mode', type: 'select', labelRu: 'Стиль', labelEn: 'Style', values: ['normal', 'fun', 'spicy'], defaultValue: 'normal' },
+    ],
   },
 
   // ══════════════════════ MOTION ══════════════════════
@@ -232,11 +310,17 @@ export const MODELS: ModelConfig[] = [
     supportsImageInput: true,
     description: 'Motion control v3, фото+видео-референс, 1080p',
     maxDuration: 30,
+    minDuration: 3,
     maxPromptLength: 2500,
     resolutions: ['720p', '1080p'],
     pricingNote: '720p: 20 cr/сек ($0.10) | 1080p: 27 cr/сек ($0.135)',
     kieModel: 'kling-3.0/motion-control',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'mode', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['std', 'pro'], defaultValue: 'std' },
+      { id: 'character_orientation', type: 'select', labelRu: 'Ориентация персонажа', labelEn: 'Character orientation', values: ['video', 'image'], defaultValue: 'video' },
+      { id: 'background_source', type: 'select', labelRu: 'Источник фона', labelEn: 'Background source', values: ['input_video', 'input_image'], defaultValue: 'input_video' },
+    ],
   },
   {
     id: 'kling-2-6-motion',
@@ -246,11 +330,16 @@ export const MODELS: ModelConfig[] = [
     supportsImageInput: true,
     description: 'Бюджетный motion control, на 60% дешевле',
     maxDuration: 30,
+    minDuration: 3,
     maxPromptLength: 2500,
     resolutions: ['720p', '1080p'],
     pricingNote: '720p: 6 cr/сек ($0.03) | 1080p: 9 cr/сек ($0.045)',
     kieModel: 'kling-2.6/motion-control',
     kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'mode', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['720p', '1080p'], defaultValue: '720p' },
+      { id: 'character_orientation', type: 'select', labelRu: 'Ориентация персонажа', labelEn: 'Character orientation', values: ['video', 'image'], defaultValue: 'video' },
+    ],
   },
   {
     id: 'kling-avatar',
@@ -265,6 +354,7 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '720P: 8 cr/сек ($0.04) | 1080P: 16 cr/сек ($0.08)',
     kieModel: 'kling/ai-avatar-pro',
     kieEndpoint: '/jobs/createTask',
+    settings: [],
   },
 
   // ══════════════════════ MUSIC ══════════════════════
@@ -280,6 +370,12 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '12 cr ($0.06) за генерацию',
     kieModel: 'V4',
     kieEndpoint: '/generate',
+    settings: [
+      { id: 'instrumental', type: 'toggle', labelRu: 'Инструментал (без вокала)', labelEn: 'Instrumental (no vocals)', defaultValue: false },
+      { id: 'customMode', type: 'toggle', labelRu: 'Расширенный режим', labelEn: 'Custom mode', defaultValue: false },
+      { id: 'title', type: 'text', labelRu: 'Название трека', labelEn: 'Track title', defaultValue: '' },
+      { id: 'style', type: 'text', labelRu: 'Стиль (pop, rock, jazz...)', labelEn: 'Style (pop, rock, jazz...)', defaultValue: '' },
+    ],
   },
   {
     id: 'suno-v4-5',
@@ -292,6 +388,12 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '12 cr ($0.06) за генерацию',
     kieModel: 'V4_5',
     kieEndpoint: '/generate',
+    settings: [
+      { id: 'instrumental', type: 'toggle', labelRu: 'Инструментал (без вокала)', labelEn: 'Instrumental (no vocals)', defaultValue: false },
+      { id: 'customMode', type: 'toggle', labelRu: 'Расширенный режим', labelEn: 'Custom mode', defaultValue: false },
+      { id: 'title', type: 'text', labelRu: 'Название трека', labelEn: 'Track title', defaultValue: '' },
+      { id: 'style', type: 'text', labelRu: 'Стиль (pop, rock, jazz...)', labelEn: 'Style (pop, rock, jazz...)', defaultValue: '' },
+    ],
   },
   {
     id: 'suno-v5',
@@ -304,6 +406,12 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '12 cr ($0.06) за генерацию',
     kieModel: 'V5',
     kieEndpoint: '/generate',
+    settings: [
+      { id: 'instrumental', type: 'toggle', labelRu: 'Инструментал (без вокала)', labelEn: 'Instrumental (no vocals)', defaultValue: false },
+      { id: 'customMode', type: 'toggle', labelRu: 'Расширенный режим', labelEn: 'Custom mode', defaultValue: false },
+      { id: 'title', type: 'text', labelRu: 'Название трека', labelEn: 'Track title', defaultValue: '' },
+      { id: 'style', type: 'text', labelRu: 'Стиль (pop, rock, jazz...)', labelEn: 'Style (pop, rock, jazz...)', defaultValue: '' },
+    ],
   },
   {
     id: 'suno-v5-5',
@@ -316,6 +424,12 @@ export const MODELS: ModelConfig[] = [
     pricingNote: '12 cr ($0.06) за генерацию',
     kieModel: 'V5_5',
     kieEndpoint: '/generate',
+    settings: [
+      { id: 'instrumental', type: 'toggle', labelRu: 'Инструментал (без вокала)', labelEn: 'Instrumental (no vocals)', defaultValue: false },
+      { id: 'customMode', type: 'toggle', labelRu: 'Расширенный режим', labelEn: 'Custom mode', defaultValue: false },
+      { id: 'title', type: 'text', labelRu: 'Название трека', labelEn: 'Track title', defaultValue: '' },
+      { id: 'style', type: 'text', labelRu: 'Стиль (pop, rock, jazz...)', labelEn: 'Style (pop, rock, jazz...)', defaultValue: '' },
+    ],
   },
 ]
 
