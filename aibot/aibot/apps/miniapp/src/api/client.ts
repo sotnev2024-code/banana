@@ -6,13 +6,14 @@ export function setToken(t: string) { _token = t }
 export function getToken() { return _token }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (_token) headers['Authorization'] = `Bearer ${_token}`
 
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
   if (!res.ok) {
@@ -59,7 +60,7 @@ export const createPayment = (planId: string) =>
 
 // Daily bonus
 export const claimDailyBonus = () =>
-  req<{ tokens: number; streak: number; nextClaimAt: string }>('POST', '/me/daily')
+  req<{ tokens: number; streak: number; nextClaimAt: string }>('POST', '/me/daily', {})
 
 // Referral
 export const getReferralStats = () =>
