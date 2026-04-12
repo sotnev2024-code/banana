@@ -436,6 +436,106 @@ export const MODELS: ModelConfig[] = [
 export const getModel = (id: string) => MODELS.find(m => m.id === id)
 export const getModelsByType = (type: GenerationType) => MODELS.filter(m => m.type === type)
 
+// ─── Dynamic pricing ─────────────────────────────────────────────────────────
+
+export function calculatePrice(modelId: string, settings: Record<string, string | number | boolean> = {}): number {
+  const model = getModel(modelId)
+  if (!model) return 0
+
+  switch (modelId) {
+    // ── IMAGE ──
+    case 'nano-banana-pro': {
+      const res = String(settings.resolution ?? '1K')
+      return res === '1K' ? 18 : 24 // 2K/4K same price
+    }
+    case 'nano-banana-2': {
+      const res = String(settings.resolution ?? '1K')
+      if (res === '1K') return 8
+      if (res === '2K') return 12
+      return 18 // 4K
+    }
+    case 'seedream-4-5-edit':
+      return 7
+    case 'seedream-5-lite':
+      return 6
+    case 'grok-text-to-image': {
+      const pro = settings.enable_pro === true || settings.enable_pro === 'true'
+      return pro ? 5 : 4
+    }
+    case 'grok-image-to-image':
+      return 4
+
+    // ── VIDEO ──
+    case 'veo3-lite':
+      return 30
+    case 'veo3-fast':
+      return 60
+    case 'veo3-quality':
+      return 250
+
+    case 'kling-3-0': {
+      const dur = Number(settings.duration ?? 5)
+      const mode = String(settings.mode ?? 'std')
+      const sound = settings.sound === true || settings.sound === 'true'
+      const rateMap: Record<string, number> = {
+        'std': sound ? 20 : 14,
+        'pro': sound ? 27 : 18,
+      }
+      return Math.ceil((rateMap[mode] ?? 14) * dur)
+    }
+    case 'kling-2-6-i2v': {
+      const dur = String(settings.duration ?? '5')
+      const sound = settings.sound === true || settings.sound === 'true'
+      if (dur === '5') return sound ? 110 : 55
+      return sound ? 220 : 110 // 10s
+    }
+    case 'seedance-2': {
+      const dur = Number(settings.duration ?? 8)
+      const res = String(settings.resolution ?? '720p')
+      // Without video input rates (conservative)
+      const rate = res === '480p' ? 19 : 41
+      return Math.ceil(rate * dur)
+    }
+    case 'grok-text-to-video': {
+      const dur = Number(settings.duration ?? 10)
+      const res = String(settings.resolution ?? '480p')
+      const rate = res === '480p' ? 1.6 : 3
+      return Math.ceil(rate * dur)
+    }
+    case 'grok-image-to-video': {
+      const dur = Number(settings.duration ?? 10)
+      const res = String(settings.resolution ?? '480p')
+      const rate = res === '480p' ? 1.6 : 3
+      return Math.ceil(rate * dur)
+    }
+
+    // ── MOTION ──
+    case 'kling-3-0-motion': {
+      const mode = String(settings.mode ?? 'std')
+      // Per-second, default 5 sec assumed
+      const rate = mode === 'pro' ? 27 : 20
+      return Math.ceil(rate * 5) // base 5 sec estimate
+    }
+    case 'kling-2-6-motion': {
+      const mode = String(settings.mode ?? '720p')
+      const rate = mode === '1080p' ? 9 : 6
+      return Math.ceil(rate * 5) // base 5 sec estimate
+    }
+    case 'kling-avatar':
+      return 80
+
+    // ── MUSIC ──
+    case 'suno-v4':
+    case 'suno-v4-5':
+    case 'suno-v5':
+    case 'suno-v5-5':
+      return 12
+
+    default:
+      return model.tokensPerGeneration
+  }
+}
+
 // ─── Token plans ──────────────────────────────────────────────────────────────
 
 export interface TokenPlan {

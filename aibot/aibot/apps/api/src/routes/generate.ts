@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { Queue } from 'bullmq'
 import { prisma, redis } from '../index'
-import { getModel } from '@aibot/shared'
+import { getModel, calculatePrice } from '@aibot/shared'
 
 export const generationQueue = new Queue('generations', { connection: redis })
 
@@ -9,11 +9,12 @@ export async function generateRoutes(app: FastifyInstance) {
   // POST /generate
   app.post('/', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
     const { userId } = req.user as { userId: string }
-    const { model: modelId, prompt, imageUrl, isPublic = true } = req.body as {
+    const { model: modelId, prompt, imageUrl, isPublic = true, settings = {} } = req.body as {
       model: string
       prompt: string
       imageUrl?: string
       isPublic?: boolean
+      settings?: Record<string, string | number | boolean>
     }
 
     if (!prompt?.trim()) return reply.code(400).send({ error: 'prompt required' })
@@ -21,12 +22,15 @@ export async function generateRoutes(app: FastifyInstance) {
     const model = getModel(modelId)
     if (!model) return reply.code(400).send({ error: 'Unknown model' })
 
+    // Calculate dynamic price based on settings
+    const price = calculatePrice(modelId, settings)
+
     // Check balance
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
-    if (user.balance < model.tokensPerGeneration) {
+    if (user.balance < price) {
       return reply.code(402).send({
         error: 'Insufficient tokens',
-        required: model.tokensPerGeneration,
+        required: price,
         balance: user.balance,
       })
     }
@@ -35,12 +39,12 @@ export async function generateRoutes(app: FastifyInstance) {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
-        data: { balance: { decrement: model.tokensPerGeneration }, totalSpent: { increment: model.tokensPerGeneration } },
+        data: { balance: { decrement: price }, totalSpent: { increment: price } },
       }),
       prisma.transaction.create({
         data: {
           userId,
-          amount: -model.tokensPerGeneration,
+          amount: -price,
           type: 'SPEND',
           description: `Генерация ${model.name}`,
         },
@@ -56,7 +60,7 @@ export async function generateRoutes(app: FastifyInstance) {
         prompt: prompt.trim(),
         imageUrl: imageUrl ?? null,
         status: 'PENDING',
-        tokensSpent: model.tokensPerGeneration,
+        tokensSpent: price,
         isPublic,
       },
     })

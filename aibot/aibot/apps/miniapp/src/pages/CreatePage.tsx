@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { MODELS, type ModelConfig, getModelsByType } from '@aibot/shared'
+import { MODELS, type ModelConfig, getModelsByType, calculatePrice } from '@aibot/shared'
 import { createGeneration } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { ModelSettings } from '../components/ui/ModelSettings'
@@ -257,7 +257,7 @@ export default function CreatePage() {
         )}
 
         <button className="btn-primary" onClick={handleGenerate} disabled={!prompt.trim() || !selectedModel}>
-          {t('create.generate')} — {model?.tokensPerGeneration ?? 0}
+          {t('create.generate')} — {selectedModel ? calculatePrice(selectedModel, modelSettings) : 0}
         </button>
       </div>
     </>
