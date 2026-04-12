@@ -99,8 +99,8 @@ async function generateTask(
   if (settings.nsfw_checker !== undefined) input.nsfw_checker = false
   if (settings.web_search !== undefined) input.web_search = settings.web_search === true || settings.web_search === 'true'
 
-  // Image inputs
-  if (imageUrl) {
+  // Image inputs (skip blob: URLs — they are local browser references)
+  if (imageUrl && !imageUrl.startsWith('blob:')) {
     // Different models expect different field names
     if (kieModel.includes('image-to-video') || kieModel.includes('seedance')) {
       input.first_frame_url = imageUrl
