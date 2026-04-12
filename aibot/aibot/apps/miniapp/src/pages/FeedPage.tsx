@@ -74,12 +74,15 @@ function FeedCard({ item, onClick }: { item: Generation; onClick: () => void }) 
 export default function FeedPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [filter, setFilter] = useState('ALL')
+  const [filterIndex, setFilterIndex] = useState(0)
+  const filter = FILTERS[filterIndex].value
   const [items, setItems] = useState<Generation[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const loaderRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
 
   const load = useCallback(async (reset = false) => {
     if (loading) return
@@ -111,6 +114,23 @@ export default function FeedPage() {
     return () => obs.disconnect()
   }, [hasMore, loading, load])
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
+    if (Math.abs(dx) > 60 && dy < 80) {
+      if (dx < 0 && filterIndex < FILTERS.length - 1) {
+        setFilterIndex(filterIndex + 1)
+      } else if (dx > 0 && filterIndex > 0) {
+        setFilterIndex(filterIndex - 1)
+      }
+    }
+  }
+
   return (
     <>
       <div className="topbar">
@@ -127,15 +147,15 @@ export default function FeedPage() {
       </div>
 
       <div className="filter-row">
-        {FILTERS.map(f => (
-          <button key={f.value} className={`filter-pill ${filter === f.value ? 'active' : ''}`}
-            onClick={() => setFilter(f.value)}>
+        {FILTERS.map((f, i) => (
+          <button key={f.value} className={`filter-pill ${filterIndex === i ? 'active' : ''}`}
+            onClick={() => setFilterIndex(i)}>
             {f.label()}
           </button>
         ))}
       </div>
 
-      <div className="feed-grid">
+      <div className="feed-grid" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {items.map(item => (
           <FeedCard key={item.id} item={item}
             onClick={() => navigate(`/generation/${item.id}`)} />
