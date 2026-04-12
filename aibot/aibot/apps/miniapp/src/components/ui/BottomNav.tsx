@@ -1,9 +1,10 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { t } from '../../i18n'
 
 const tabs = [
   {
     path: '/feed',
-    label: 'Лента',
+    key: 'nav.feed' as const,
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8}>
         <rect x="3" y="3" width="7" height="7" rx="1.5"/>
@@ -15,7 +16,7 @@ const tabs = [
   },
   {
     path: '/create',
-    label: 'Создать',
+    key: 'nav.create' as const,
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8}>
         <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
@@ -24,7 +25,7 @@ const tabs = [
   },
   {
     path: '/history',
-    label: 'История',
+    key: 'nav.history' as const,
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
         <path d="M3 6h18M3 12h14M3 18h10"/>
@@ -33,7 +34,7 @@ const tabs = [
   },
   {
     path: '/profile',
-    label: 'Профиль',
+    key: 'nav.profile' as const,
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8}>
         <circle cx="12" cy="8" r="4"/>
@@ -62,7 +63,7 @@ export function BottomNav() {
             onClick={() => navigate(tab.path)}
           >
             {tab.icon(active)}
-            <span>{tab.label}</span>
+            <span>{t(tab.key)}</span>
           </button>
         )
       })}

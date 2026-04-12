@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { authTelegram, setToken, type UserFull } from '../api/client'
+import { setLang, detectLang, detectTheme } from '../i18n'
 
 interface AuthCtx {
   user: UserFull | null
@@ -10,7 +11,10 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx>({ user: null, loading: true, refresh: async () => {} })
 
 function applyTheme(theme: string) {
-  document.documentElement.setAttribute('data-theme', theme || 'auto')
+  const resolved = theme === 'auto'
+    ? (window.Telegram?.WebApp?.colorScheme ?? 'light')
+    : theme
+  document.documentElement.setAttribute('data-theme', resolved)
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -19,6 +23,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const init = async () => {
     try {
+      // Auto-detect from Telegram
+      const detectedLang = detectLang()
+      const detectedTheme = detectTheme()
+      setLang(detectedLang)
+      applyTheme(detectedTheme)
+
       const tg = window.Telegram?.WebApp
       const initData = tg?.initData ?? ''
 
@@ -32,7 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(token)
       localStorage.setItem('jwt', token)
       setUser(user)
-      applyTheme(user.theme)
+
+      // Apply user's saved preferences (override auto-detect)
+      if (user.lang) setLang(user.lang)
+      if (user.theme) applyTheme(user.theme)
     } catch (e) {
       console.error('Auth failed', e)
     } finally {
@@ -40,12 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     const { getMe } = await import('../api/client')
     const u = await getMe()
     setUser(u)
-    applyTheme(u.theme)
-  }
+    if (u.lang) setLang(u.lang)
+    if (u.theme) applyTheme(u.theme)
+  }, [])
 
   useEffect(() => {
     const saved = localStorage.getItem('jwt')

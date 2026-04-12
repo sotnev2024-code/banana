@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getPlans, createPayment, type Plan } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
+import { t } from '../i18n'
 
 export default function PlansPage() {
   const { user } = useAuth()
@@ -21,7 +22,6 @@ export default function PlansPage() {
         const { confirmationUrl } = await createPayment(selected)
         window.location.href = confirmationUrl
       } else {
-        // Telegram Stars — trigger bot invoice via deep link
         window.Telegram?.WebApp?.openTelegramLink(
           `https://t.me/${import.meta.env.VITE_BOT_USERNAME}?start=buy_${selected}`
         )
@@ -37,16 +37,13 @@ export default function PlansPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--bg)' }}>
-      {/* Header */}
       <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => navigate(-1)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-            <path d="M11 4L6 9l5 5"/>
-          </svg>
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M11 4L6 9l5 5"/></svg>
         </button>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Пополнение</div>
-          {user && <div style={{ fontSize: 12, color: 'var(--text2)' }}>Баланс: {user.balance} 🪙</div>}
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{t('plans.title')}</div>
+          {user && <div style={{ fontSize: 12, color: 'var(--text2)' }}>{t('plans.balance', { balance: String(user.balance) })}</div>}
         </div>
       </div>
 
@@ -54,41 +51,34 @@ export default function PlansPage() {
         {plans.map(p => {
           const total = p.tokens + p.bonusTokens
           return (
-            <div
-              key={p.id}
+            <div key={p.id}
               className={`plan-card ${p.popular ? 'popular' : ''} ${selected === p.id ? 'selected' : ''}`}
-              onClick={() => setSelected(p.id)}
-            >
-              {p.popular && <div className="plan-popular-badge">Хит продаж</div>}
+              onClick={() => setSelected(p.id)}>
+              {p.popular && <div className="plan-popular-badge">{t('plans.popular')}</div>}
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</div>
                 <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
-                  {total} токенов{p.bonusTokens > 0 ? ` (+${p.bonusTokens} бонус)` : ''}
+                  {total} {t('plans.tokens')}{p.bonusTokens > 0 ? ` (${t('plans.bonus', { bonus: String(p.bonusTokens) })})` : ''}
                 </div>
               </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{p.priceRub} ₽</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{p.priceRub} P</div>
             </div>
           )
         })}
 
-        {/* Payment method */}
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10, fontWeight: 500 }}>Способ оплаты</div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10, fontWeight: 500 }}>{t('plans.payMethod')}</div>
           {[
-            { id: 'yukassa', label: 'Банковская карта (ЮKassa)', icon: '💳' },
-            { id: 'stars',   label: 'Telegram Stars',            icon: '⭐' },
+            { id: 'yukassa', label: t('plans.card') },
+            { id: 'stars',   label: t('plans.stars') },
           ].map(m => (
-            <div
-              key={m.id}
-              onClick={() => setPayMethod(m.id as any)}
+            <div key={m.id} onClick={() => setPayMethod(m.id as any)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 14px', borderRadius: 12, marginBottom: 8,
                 background: 'var(--surface)', border: `${payMethod === m.id ? '2px solid var(--accent)' : '0.5px solid var(--border)'}`,
                 cursor: 'pointer',
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{m.icon}</span>
+              }}>
               <span style={{ fontSize: 14, flex: 1 }}>{m.label}</span>
               <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${payMethod === m.id ? 'var(--accent)' : 'var(--border)'}`, background: payMethod === m.id ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {payMethod === m.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
@@ -100,7 +90,7 @@ export default function PlansPage() {
 
       <div style={{ padding: '12px 16px 32px' }}>
         <button className="btn-primary" onClick={handlePay} disabled={!selected || loading}>
-          {loading ? 'Открываю оплату...' : `Оплатить ${plan?.priceRub ?? ''} ₽`}
+          {loading ? t('plans.paying') : t('plans.pay', { price: String(plan?.priceRub ?? '') })}
         </button>
       </div>
     </div>
