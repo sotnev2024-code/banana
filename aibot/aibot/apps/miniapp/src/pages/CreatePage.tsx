@@ -21,6 +21,7 @@ const MODEL_PREVIEWS: Record<string, { type: 'image' | 'video'; file: string }> 
   'grok-text-to-video': { type: 'video', file: 'grok-text-to-video-sm.mp4' },
   'grok-image-to-video':{ type: 'video', file: 'grok-image-to-video-sm.mp4' },
   'kling-2-6-i2v':      { type: 'video', file: 'kling-2-6-i2v-sm.mp4' },
+  'kling-3-0':          { type: 'video', file: 'kling-3-0-sm.mp4' },
 }
 
 const MODEL_COLORS: Record<string, string> = {
