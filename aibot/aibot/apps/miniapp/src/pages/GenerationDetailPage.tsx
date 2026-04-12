@@ -13,6 +13,7 @@ export default function GenerationDetailPage() {
   const [detail, setDetail] = useState<GenerationDetail | null>(null)
   const [showComments, setShowComments] = useState(false)
   const [showPromptPanel, setShowPromptPanel] = useState(false)
+  const [initialScrollDone, setInitialScrollDone] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Load feed items for swiping
@@ -25,24 +26,36 @@ export default function GenerationDetailPage() {
     })
   }, [id])
 
+  // Scroll to the correct card once items are loaded
+  useEffect(() => {
+    if (items.length === 0 || initialScrollDone) return
+    if (!containerRef.current) return
+    const height = containerRef.current.clientHeight
+    if (height === 0) return
+    containerRef.current.scrollTo({ top: currentIndex * height, behavior: 'instant' as any })
+    setInitialScrollDone(true)
+  }, [items, currentIndex, initialScrollDone])
+
   // Load detail for current item
   useEffect(() => {
     const currentItem = items[currentIndex]
     if (!currentItem) return
+    setDetail(null)
     getFeedItem(currentItem.id).then(setDetail).catch(() => {})
   }, [currentIndex, items])
 
   // Scroll snap handler
   const handleScroll = useCallback(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current || !initialScrollDone) return
     const scrollTop = containerRef.current.scrollTop
     const height = containerRef.current.clientHeight
     const newIndex = Math.round(scrollTop / height)
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < items.length) {
       setCurrentIndex(newIndex)
       setShowComments(false)
+      setShowPromptPanel(false)
     }
-  }, [currentIndex, items.length])
+  }, [currentIndex, items.length, initialScrollDone])
 
   if (items.length === 0) {
     return <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
