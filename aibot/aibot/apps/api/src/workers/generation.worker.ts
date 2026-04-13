@@ -81,21 +81,28 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         const { execSync } = require('child_process')
         const ext = result.resultUrl.match(/\.(jpeg|jpg|png|webp|mp4|mp3|wav)/)?.[0] ?? '.bin'
         const origFilename = `${generationId}${ext}`
-        execSync(`mkdir -p /opt/banana/uploads/gen/thumb`)
-        execSync(`curl -s -4 -o /opt/banana/uploads/gen/${origFilename} "${result.resultUrl}"`, { timeout: 30000 })
+        const isImage = ['.jpeg', '.jpg', '.png', '.webp'].includes(ext)
+        const isVideo = ['.mp4'].includes(ext)
 
-        // Convert images to WebP for faster loading
+        execSync(`mkdir -p /opt/banana/uploads/gen/thumb`)
+        // Longer timeout for videos (up to 120s for large files)
+        const dlTimeout = isVideo ? 120000 : 30000
+        execSync(`curl -s -4 -o /opt/banana/uploads/gen/${origFilename} "${result.resultUrl}"`, { timeout: dlTimeout })
+
         let filename = origFilename
-        if (['.jpeg', '.jpg', '.png'].includes(ext)) {
+
+        if (isImage) {
+          // Convert images to WebP
           const webpName = `${generationId}.webp`
           execSync(`cwebp -q 85 /opt/banana/uploads/gen/${origFilename} -o /opt/banana/uploads/gen/${webpName} 2>/dev/null || true`, { timeout: 15000 })
-          // Create WebP thumbnail
           execSync(`cwebp -q 75 -resize 400 0 /opt/banana/uploads/gen/${origFilename} -o /opt/banana/uploads/gen/thumb/${webpName} 2>/dev/null || true`, { timeout: 10000 })
-          // Check if WebP was created
           try { execSync(`test -s /opt/banana/uploads/gen/${webpName}`); filename = webpName } catch { filename = origFilename }
-          // Fallback thumb
           execSync(`convert /opt/banana/uploads/gen/${origFilename} -resize 400x -quality 80 /opt/banana/uploads/gen/thumb/${origFilename} 2>/dev/null || true`, { timeout: 10000 })
+        } else if (isVideo) {
+          // Create video thumbnail (first frame as image)
+          execSync(`ffmpeg -y -i /opt/banana/uploads/gen/${origFilename} -vframes 1 -vf scale=400:-2 /opt/banana/uploads/gen/thumb/${generationId}.jpg 2>/dev/null || true`, { timeout: 10000 })
         }
+
         localUrl = `${process.env.API_URL ?? 'https://picpulse.fun'}/uploads/gen/${filename}`
       } catch (e) {
         logError('generation.download', e, { generationId })
