@@ -297,6 +297,34 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send(updated)
   })
 
+  // ═══ LOGS ═══
+
+  app.get('/logs/errors', async (req, reply) => {
+    const { lines = '50' } = req.query as Record<string, string>
+    try {
+      const { readFileSync } = require('fs')
+      const content = readFileSync('/opt/banana/logs/errors.log', 'utf8')
+      const allLines = content.trim().split('\n').filter(Boolean)
+      const last = allLines.slice(-Number(lines))
+      return reply.send(last.map((l: string) => { try { return JSON.parse(l) } catch { return { raw: l } } }))
+    } catch {
+      return reply.send([])
+    }
+  })
+
+  app.get('/logs/api', async (req, reply) => {
+    const { lines = '50' } = req.query as Record<string, string>
+    try {
+      const { readFileSync } = require('fs')
+      const content = readFileSync('/opt/banana/logs/api.log', 'utf8')
+      const allLines = content.trim().split('\n').filter(Boolean)
+      const last = allLines.slice(-Number(lines))
+      return reply.send(last.map((l: string) => { try { return JSON.parse(l) } catch { return { raw: l } } }))
+    } catch {
+      return reply.send([])
+    }
+  })
+
   // ═══ BROADCAST ═══
 
   app.post('/broadcast', async (req, reply) => {

@@ -7,6 +7,7 @@ import { AdminReports } from './AdminReports'
 import { AdminPayments } from './AdminPayments'
 import { AdminPromos } from './AdminPromos'
 import { AdminBroadcast } from './AdminBroadcast'
+import { AdminLogs } from './AdminLogs'
 
 const ADMIN_IDS = ['1724263429']
 
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'payments', label: 'Платежи' },
   { id: 'promos', label: 'Промокоды' },
   { id: 'broadcast', label: 'Рассылка' },
+  { id: 'logs', label: 'Логи' },
 ]
 
 export default function AdminPage() {
@@ -51,6 +53,7 @@ export default function AdminPage() {
         {tab === 'payments' && <AdminPayments />}
         {tab === 'promos' && <AdminPromos />}
         {tab === 'broadcast' && <AdminBroadcast />}
+        {tab === 'logs' && <AdminLogs />}
       </div>
     </div>
   )

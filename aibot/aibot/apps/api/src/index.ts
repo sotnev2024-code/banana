@@ -13,6 +13,7 @@ import { plansRoutes, profileRoutes } from './routes/profile'
 import { uploadRoutes } from './routes/upload'
 import { usersRoutes } from './routes/users'
 import { adminRoutes } from './routes/admin'
+import { logError, logApi } from './logger'
 import { startGenerationWorker } from './workers/generation.worker'
 
 export const prisma = new PrismaClient()
@@ -48,6 +49,19 @@ async function main() {
   app.register(uploadRoutes,  { prefix: '/upload' })
   app.register(usersRoutes,   { prefix: '/users' })
   app.register(adminRoutes,   { prefix: '/admin' })
+
+  // Global error handler
+  app.setErrorHandler((error, req, reply) => {
+    logError('api', error, { method: req.method, url: req.url })
+    reply.code(error.statusCode ?? 500).send({ error: error.message })
+  })
+
+  // Request logging
+  app.addHook('onResponse', (req, reply, done) => {
+    const userId = (req.user as any)?.userId
+    logApi(req.method, req.url, reply.statusCode, reply.elapsedTime, userId)
+    done()
+  })
 
   app.get('/health', async () => ({ ok: true }))
 

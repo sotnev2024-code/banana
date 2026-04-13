@@ -2,6 +2,7 @@ import { Worker, type ConnectionOptions } from 'bullmq'
 import { prisma } from '../index'
 import { generate, pollTask, getModel } from '@aibot/shared'
 import { checkAchievements } from '../achievements'
+import { logError } from '../logger'
 
 const POLL_INTERVAL = 5000   // 5 sec
 const MAX_POLL_TIME = 600000 // 10 min timeout
@@ -59,7 +60,7 @@ export function startGenerationWorker(connection: ConnectionOptions) {
       try {
         taskId = await generate(modelId, prompt, imageUrl, settings)
       } catch (err) {
-        console.error(`Generation ${generationId} API error:`, err)
+        logError('generation.api', err, { generationId, modelId })
         await prisma.generation.update({ where: { id: generationId }, data: { status: 'FAILED', errorMsg: String(err) } })
         await refundTokens(generationId)
         return // don't throw — no retry
@@ -97,7 +98,7 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         }
         localUrl = `${process.env.API_URL ?? 'https://picpulse.fun'}/uploads/gen/${filename}`
       } catch (e) {
-        console.error('Failed to download result locally:', e)
+        logError('generation.download', e, { generationId })
       }
 
       await prisma.generation.update({
@@ -148,7 +149,7 @@ export function startGenerationWorker(connection: ConnectionOptions) {
           console.log(`No user found for generation ${generationId}`)
         }
       } catch (e) {
-        console.error('Failed to notify user:', e)
+        logError('generation.notify', e, { generationId })
       }
     },
     { connection, concurrency: 5 },

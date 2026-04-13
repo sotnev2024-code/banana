@@ -39,3 +39,5 @@ export const createPromo = (code: string, tokens: number, maxUses: number) =>
   adminReq<any>('POST', '/promos', { code, tokens, maxUses })
 export const togglePromo = (id: string) => adminReq<any>('POST', `/promos/${id}/toggle`, {})
 export const broadcast = (message: string) => adminReq<any>('POST', '/broadcast', { message })
+export const getErrorLogs = (lines = 50) => adminReq<any[]>('GET', `/logs/errors?lines=${lines}`)
+export const getApiLogs = (lines = 50) => adminReq<any[]>('GET', `/logs/api?lines=${lines}`)
