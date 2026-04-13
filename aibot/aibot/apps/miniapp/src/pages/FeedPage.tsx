@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getFeed, type Generation } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
@@ -13,30 +13,31 @@ const FILTERS = [
 ]
 
 function FeedCard({ item, onClick }: { item: Generation; onClick: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
   const isVideo = item.type === 'VIDEO' || item.type === 'MOTION'
   const isMusic = item.type === 'MUSIC'
-
-  useEffect(() => {
-    if (!videoRef.current) return
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) videoRef.current?.play().catch(() => {})
-        else videoRef.current?.pause()
-      },
-      { threshold: 0.5 },
-    )
-    obs.observe(videoRef.current)
-    return () => obs.disconnect()
-  }, [])
+  const thumbSrc = (item as any).thumbnailUrl ?? item.resultUrl
 
   const modelLabel = item.model.replace(/-/g, ' ')
 
   return (
     <div className="feed-cell" onClick={onClick}>
-      {isVideo && item.resultUrl ? (
-        <video ref={videoRef} src={item.resultUrl} loop muted playsInline
-          style={{ width: '100%', minHeight: 140, objectFit: 'cover', borderRadius: 12 }} />
+      {isVideo && thumbSrc ? (
+        <div style={{ position: 'relative' }}>
+          <img src={thumbSrc} alt={item.prompt} loading="lazy"
+            style={{ width: '100%', minHeight: 140, objectFit: 'cover', borderRadius: 12 }} />
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
       ) : isMusic ? (
         <div style={{
           minHeight: 100, background: 'var(--accent-light)',
