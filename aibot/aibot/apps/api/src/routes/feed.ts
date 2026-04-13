@@ -148,33 +148,122 @@ export async function feedRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  // GET /feed/:id/comments
+  const ADMIN_IDS = ['1724263429']
+
+  const commentSelect = {
+    id: true, text: true, likesCount: true, parentId: true, createdAt: true, userId: true,
+    user: { select: { firstName: true, username: true, photoUrl: true } },
+    replies: {
+      select: {
+        id: true, text: true, likesCount: true, parentId: true, createdAt: true, userId: true,
+        user: { select: { firstName: true, username: true, photoUrl: true } },
+      },
+      orderBy: { createdAt: 'asc' as const },
+    },
+  }
+
+  // GET /feed/:id/comments — tree structure
   app.get('/:id/comments', async (req, reply) => {
     const { id } = req.params as { id: string }
+
+    let currentUserId: string | null = null
+    try {
+      const decoded = await (req as any).jwtVerify().catch(() => null)
+      if (decoded?.userId) currentUserId = decoded.userId
+    } catch {}
+
     const comments = await prisma.comment.findMany({
-      where: { generationId: id },
-      include: { user: { select: { firstName: true, username: true, photoUrl: true } } },
+      where: { generationId: id, parentId: null },
+      select: commentSelect,
       orderBy: { createdAt: 'desc' },
       take: 100,
     })
-    return reply.send(comments)
+
+    // Check which comments current user liked
+    let likedIds = new Set<string>()
+    if (currentUserId) {
+      const allIds = comments.flatMap(c => [c.id, ...c.replies.map(r => r.id)])
+      const likes = await prisma.commentLike.findMany({
+        where: { userId: currentUserId, commentId: { in: allIds } },
+        select: { commentId: true },
+      })
+      likedIds = new Set(likes.map(l => l.commentId))
+    }
+
+    const enriched = comments.map(c => ({
+      ...c,
+      isLiked: likedIds.has(c.id),
+      isOwn: c.userId === currentUserId,
+      replies: c.replies.map(r => ({
+        ...r,
+        isLiked: likedIds.has(r.id),
+        isOwn: r.userId === currentUserId,
+      })),
+    }))
+
+    return reply.send(enriched)
   })
 
-  // POST /feed/:id/comments
+  // POST /feed/:id/comments — create comment or reply
   app.post('/:id/comments', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
     const { userId } = req.user as { userId: string }
     const { id } = req.params as { id: string }
-    const { text } = req.body as { text: string }
+    const { text, parentId } = req.body as { text: string; parentId?: string }
 
     if (!text?.trim() || text.length > 500) {
       return reply.code(400).send({ error: 'Invalid comment' })
     }
 
     const comment = await prisma.comment.create({
-      data: { userId, generationId: id, text: text.trim() },
+      data: { userId, generationId: id, text: text.trim(), parentId: parentId ?? null },
       include: { user: { select: { firstName: true, username: true, photoUrl: true } } },
     })
 
-    return reply.send(comment)
+    return reply.send({ ...comment, isLiked: false, isOwn: true, replies: [] })
+  })
+
+  // DELETE /feed/comments/:commentId
+  app.delete('/comments/:commentId', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId, telegramId } = req.user as { userId: string; telegramId: string }
+    const { commentId } = req.params as { commentId: string }
+
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } })
+    if (!comment) return reply.code(404).send({ error: 'Not found' })
+
+    const isAdmin = ADMIN_IDS.includes(telegramId)
+    if (comment.userId !== userId && !isAdmin) {
+      return reply.code(403).send({ error: 'Forbidden' })
+    }
+
+    // Cascade delete: replies + likes handled by onDelete: Cascade in schema
+    await prisma.comment.delete({ where: { id: commentId } })
+
+    return reply.send({ ok: true })
+  })
+
+  // POST /feed/comments/:commentId/like — toggle like
+  app.post('/comments/:commentId/like', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const { commentId } = req.params as { commentId: string }
+
+    const existing = await prisma.commentLike.findUnique({
+      where: { userId_commentId: { userId, commentId } },
+    })
+
+    if (existing) {
+      await prisma.$transaction([
+        prisma.commentLike.delete({ where: { id: existing.id } }),
+        prisma.comment.update({ where: { id: commentId }, data: { likesCount: { decrement: 1 } } }),
+      ])
+      const c = await prisma.comment.findUnique({ where: { id: commentId }, select: { likesCount: true } })
+      return reply.send({ liked: false, likesCount: c?.likesCount ?? 0 })
+    } else {
+      await prisma.$transaction([
+        prisma.commentLike.create({ data: { userId, commentId } }),
+        prisma.comment.update({ where: { id: commentId }, data: { likesCount: { increment: 1 } } }),
+      ])
+      const c = await prisma.comment.findUnique({ where: { id: commentId }, select: { likesCount: true } })
+      return reply.send({ liked: true, likesCount: c?.likesCount ?? 0 })
+    }
   })
 }

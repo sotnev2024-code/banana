@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getFeed, getFeedItem, toggleLike, addFavorite, removeFavorite, addComment, reportGeneration, type Generation, type GenerationDetail, type CommentItem } from '../api/client'
+import { getFeed, getFeedItem, toggleLike, addFavorite, removeFavorite, addComment, deleteComment, toggleCommentLike, getComments, reportGeneration, type Generation, type GenerationDetail, type CommentItem } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { t } from '../i18n'
 import { toast } from '../components/ui/Toast'
@@ -126,7 +126,9 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
   const [comments, setComments] = useState<CommentItem[]>([])
   const [commentsCount, setCommentsCount] = useState(0)
   const [commentText, setCommentText] = useState('')
+  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null)
   const [reported, setReported] = useState(false)
+  const isAdmin = user && ['1724263429'].includes(user.telegramId)
   const [showReport, setShowReport] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportComment, setReportComment] = useState('')
@@ -140,7 +142,8 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
       setIsFav(detail.isFavorited ?? false)
       setReported(detail.isReported ?? false)
       setCommentsCount(detail.commentsCount ?? 0)
-      setComments(detail.comments ?? [])
+      // Load comments separately for tree structure
+      getComments(detail.id).then(setComments).catch(() => {})
     }
   }, [detail])
 
@@ -172,11 +175,45 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
 
   const handleComment = async () => {
     if (!commentText.trim()) return
-    const c = await addComment(item.id, commentText.trim()).catch(() => null)
+    const c = await addComment(item.id, commentText.trim(), replyTo?.id).catch(() => null)
     if (c) {
-      setComments(prev => [c, ...prev])
+      if (replyTo) {
+        // Add reply under parent
+        setComments(prev => prev.map(p =>
+          p.id === replyTo.id ? { ...p, replies: [...(p.replies ?? []), c] } : p
+        ))
+      } else {
+        setComments(prev => [c, ...prev])
+      }
       setCommentsCount(prev => prev + 1)
       setCommentText('')
+      setReplyTo(null)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string, parentId?: string | null) => {
+    await deleteComment(commentId).catch(() => null)
+    if (parentId) {
+      setComments(prev => prev.map(p =>
+        p.id === parentId ? { ...p, replies: (p.replies ?? []).filter(r => r.id !== commentId) } : p
+      ))
+    } else {
+      setComments(prev => prev.filter(c => c.id !== commentId))
+    }
+    setCommentsCount(prev => Math.max(0, prev - 1))
+  }
+
+  const handleCommentLike = async (commentId: string, parentId?: string | null) => {
+    const res = await toggleCommentLike(commentId).catch(() => null)
+    if (!res) return
+    const updateItem = (c: CommentItem): CommentItem =>
+      c.id === commentId ? { ...c, isLiked: res.liked, likesCount: res.likesCount } : c
+    if (parentId) {
+      setComments(prev => prev.map(p =>
+        p.id === parentId ? { ...p, replies: (p.replies ?? []).map(updateItem) } : p
+      ))
+    } else {
+      setComments(prev => prev.map(updateItem))
     }
   }
 
@@ -373,7 +410,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
         <div className="viewer-comments-panel">
           <div className="viewer-comments-header">
             <span>{t('detail.comments')} ({commentsCount})</span>
-            <button onClick={onToggleComments} style={{ color: '#fff', fontSize: 20 }}>
+            <button onClick={onToggleComments} style={{ color: '#fff' }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round">
                 <path d="M4 4l12 12M16 4L4 16"/>
               </svg>
@@ -386,27 +423,27 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
               </div>
             )}
             {comments.map(c => (
-              <div key={c.id} className="viewer-comment">
-                <div className="viewer-comment-header">
-                  {c.user.photoUrl
-                    ? <img src={c.user.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-                    : <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff' }}>{c.user.firstName[0]}</div>
-                  }
-                  <span style={{ fontSize: 13, fontWeight: 500 }}>{c.user.firstName}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginLeft: 'auto' }}>
-                    {new Date(c.createdAt).toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
-                  </span>
-                </div>
-                <div style={{ fontSize: 13, marginTop: 4, paddingLeft: 32 }}>{c.text}</div>
-              </div>
+              <CommentNode key={c.id} comment={c} isAdmin={!!isAdmin}
+                onReply={(id, name) => { setReplyTo({ id, name }); }}
+                onDelete={(id) => handleDeleteComment(id, null)}
+                onLike={(id) => handleCommentLike(id, null)}
+                onDeleteReply={(id, parentId) => handleDeleteComment(id, parentId)}
+                onLikeReply={(id, parentId) => handleCommentLike(id, parentId)}
+              />
             ))}
           </div>
           <div className="viewer-comment-input">
+            {replyTo && (
+              <div style={{ position: 'absolute', top: -28, left: 14, right: 14, fontSize: 12, color: 'var(--accent)', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Reply to {replyTo.name}</span>
+                <button onClick={() => setReplyTo(null)} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Cancel</button>
+              </div>
+            )}
             <input
               type="text"
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
-              placeholder={t('detail.commentPlaceholder')}
+              placeholder={replyTo ? `Reply to ${replyTo.name}...` : t('detail.commentPlaceholder')}
               onKeyDown={e => e.key === 'Enter' && handleComment()}
             />
             <button onClick={handleComment} disabled={!commentText.trim()}>
@@ -417,6 +454,67 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function CommentNode({ comment, isAdmin, onReply, onDelete, onLike, onDeleteReply, onLikeReply, depth = 0 }: {
+  comment: CommentItem
+  isAdmin: boolean
+  onReply: (id: string, name: string) => void
+  onDelete: (id: string) => void
+  onLike: (id: string) => void
+  onDeleteReply: (id: string, parentId: string) => void
+  onLikeReply: (id: string, parentId: string) => void
+  depth?: number
+}) {
+  const c = comment
+  return (
+    <div style={{ paddingLeft: depth > 0 ? 24 : 0 }}>
+      <div className="viewer-comment">
+        <div className="viewer-comment-header">
+          {c.user.photoUrl
+            ? <img src={c.user.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
+            : <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff' }}>{c.user.firstName[0]}</div>
+          }
+          <span style={{ fontSize: 13, fontWeight: 500 }}>{c.user.firstName}</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginLeft: 'auto' }}>
+            {new Date(c.createdAt).toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
+          </span>
+        </div>
+        <div style={{ fontSize: 13, marginTop: 4, paddingLeft: 32 }}>{c.text}</div>
+        <div style={{ display: 'flex', gap: 14, paddingLeft: 32, marginTop: 6 }}>
+          {/* Like */}
+          <button onClick={() => depth > 0 ? onLikeReply(c.id, c.parentId!) : onLike(c.id)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: c.isLiked ? '#ff4757' : 'rgba(255,255,255,0.4)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={c.isLiked ? '#ff4757' : 'none'} stroke={c.isLiked ? '#ff4757' : 'currentColor'} strokeWidth={2}>
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+            {c.likesCount > 0 && c.likesCount}
+          </button>
+          {/* Reply (only on top-level) */}
+          {depth === 0 && (
+            <button onClick={() => onReply(c.id, c.user.firstName)}
+              style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              Reply
+            </button>
+          )}
+          {/* Delete (own or admin) */}
+          {(c.isOwn || isAdmin) && (
+            <button onClick={() => depth > 0 ? onDeleteReply(c.id, c.parentId!) : onDelete(c.id)}
+              style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
+      {/* Replies */}
+      {c.replies && c.replies.length > 0 && c.replies.map(r => (
+        <CommentNode key={r.id} comment={r} isAdmin={isAdmin} depth={1}
+          onReply={onReply} onDelete={onDelete} onLike={onLike}
+          onDeleteReply={onDeleteReply} onLikeReply={onLikeReply}
+        />
+      ))}
     </div>
   )
 }

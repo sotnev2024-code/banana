@@ -82,8 +82,12 @@ export const reportGeneration = (id: string, reason?: string) =>
 // Comments
 export const getComments = (id: string) =>
   req<CommentItem[]>('GET', `/feed/${id}/comments`)
-export const addComment = (id: string, text: string) =>
-  req<CommentItem>('POST', `/feed/${id}/comments`, { text })
+export const addComment = (id: string, text: string, parentId?: string) =>
+  req<CommentItem>('POST', `/feed/${id}/comments`, { text, parentId })
+export const deleteComment = (commentId: string) =>
+  req<{ ok: boolean }>('DELETE', `/feed/comments/${commentId}`)
+export const toggleCommentLike = (commentId: string) =>
+  req<{ liked: boolean; likesCount: number }>('POST', `/feed/comments/${commentId}/like`, {})
 
 // Plans
 export const getPlans = () => req<Plan[]>('GET', '/plans')
@@ -168,8 +172,13 @@ export interface GenerationDetail extends Generation {
 export interface CommentItem {
   id: string
   text: string
+  parentId?: string | null
+  likesCount: number
+  isLiked?: boolean
+  isOwn?: boolean
   createdAt: string
   user: { firstName: string; username?: string; photoUrl?: string }
+  replies?: CommentItem[]
 }
 
 export interface PaginatedGenerations {
