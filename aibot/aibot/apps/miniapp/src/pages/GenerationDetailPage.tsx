@@ -150,7 +150,10 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
 
   useEffect(() => {
     if (isActive && videoRef.current) {
+      videoRef.current.muted = true
       videoRef.current.play().catch(() => {})
+      // Try unmuting after a moment (works in Telegram WebApp context)
+      setTimeout(() => { if (videoRef.current) videoRef.current.muted = false }, 100)
     } else if (!isActive && videoRef.current) {
       videoRef.current.pause()
     }
@@ -226,8 +229,14 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
       {/* Media */}
       <div className="viewer-media">
         {isVideo && item.resultUrl ? (
-          <video ref={videoRef} src={item.resultUrl} loop playsInline controls
+          <video ref={videoRef} src={item.resultUrl} loop playsInline autoPlay
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            onClick={() => {
+              const v = videoRef.current
+              if (!v) return
+              if (v.paused) { v.play() } else { v.pause() }
+              v.muted = false
+            }}
           />
         ) : isMusic && item.resultUrl ? (
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
