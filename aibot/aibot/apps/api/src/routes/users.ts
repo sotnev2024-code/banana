@@ -1,6 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../index'
 
+function getThumbnailUrl(resultUrl: string | null, type: string): string | null {
+  if (!resultUrl) return null
+  if (!resultUrl.includes('/uploads/gen/')) return resultUrl
+  if (type === 'VIDEO' || type === 'MOTION') {
+    return resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/').replace(/\.[^.]+$/, '.jpg')
+  }
+  return resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/')
+}
+
 export async function usersRoutes(app: FastifyInstance) {
   // GET /users/:id — public profile
   app.get('/:id', async (req, reply) => {
@@ -74,9 +83,7 @@ export async function usersRoutes(app: FastifyInstance) {
 
     const feedItems = items.map(item => ({
       ...item,
-      thumbnailUrl: item.resultUrl?.includes('/uploads/gen/')
-        ? item.resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/')
-        : item.resultUrl,
+      thumbnailUrl: getThumbnailUrl(item.resultUrl, item.type),
     }))
 
     return reply.send({

@@ -2,6 +2,19 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../index'
 import { notify } from '../notifications'
 
+function getThumbnailUrl(resultUrl: string | null, type: string): string | null {
+  if (!resultUrl) return null
+  if (!resultUrl.includes('/uploads/gen/')) return resultUrl
+
+  if (type === 'VIDEO' || type === 'MOTION') {
+    // Video thumbnails are .jpg in thumb/ folder
+    const id = resultUrl.split('/').pop()?.replace(/\.[^.]+$/, '')
+    return resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/').replace(/\.[^.]+$/, '.jpg')
+  }
+
+  return resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/')
+}
+
 export async function feedRoutes(app: FastifyInstance) {
   // GET /feed?cursor=xxx&type=IMAGE&limit=20
   app.get('/', async (req, reply) => {
@@ -37,9 +50,7 @@ export async function feedRoutes(app: FastifyInstance) {
       ...item,
       commentsCount: (item as any)._count?.comments ?? 0,
       _count: undefined,
-      thumbnailUrl: item.resultUrl?.includes('/uploads/gen/')
-        ? item.resultUrl.replace('/uploads/gen/', '/uploads/gen/thumb/')
-        : item.resultUrl,
+      thumbnailUrl: getThumbnailUrl(item.resultUrl, item.type),
     }))
 
     return reply.send({
