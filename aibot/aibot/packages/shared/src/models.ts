@@ -569,13 +569,13 @@ export function calculatePrice(modelId: string, settings: Record<string, string 
     // ── MOTION ──
     case 'kling-3-0-motion': {
       const mode = String(settings.mode ?? '720p')
-      const rate = mode === '1080p' ? 27 : 20
-      cost = Math.ceil(rate * 5)
+      const rate = mode === '1080p' ? 54 : 40  // actual KIE pricing
+      cost = Math.ceil(rate * 5) // base estimate, actual depends on video length
       break
     }
     case 'kling-2-6-motion': {
       const mode = String(settings.mode ?? '720p')
-      const rate = mode === '1080p' ? 9 : 6
+      const rate = mode === '1080p' ? 18 : 12  // actual KIE pricing
       cost = Math.ceil(rate * 5)
       break
     }
