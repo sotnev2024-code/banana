@@ -105,7 +105,7 @@ export async function moderateWithDeepSeek(prompt: string): Promise<{ safe: bool
 
 // ─── Combined moderation ────────────────────────────────────────────────────
 
-export async function moderatePrompt(prompt: string): Promise<{ allowed: boolean; reason?: string }> {
+export async function moderatePrompt(prompt: string, modelId?: string): Promise<{ allowed: boolean; reason?: string }> {
   // Step 1: Blacklist check (instant)
   const blacklist = checkBlacklist(prompt)
   if (blacklist.blocked) {
@@ -113,6 +113,12 @@ export async function moderatePrompt(prompt: string): Promise<{ allowed: boolean
   }
 
   // Step 2: DeepSeek AI moderation
+  // Skip for motion/avatar models where character transfer is the core feature
+  const skipAiModels = ['kling-3-0-motion', 'kling-2-6-motion', 'kling-avatar', 'kling-2-6-i2v', 'grok-image-to-video', 'grok-image-to-image', 'seedream-4-5-edit']
+  if (modelId && skipAiModels.includes(modelId)) {
+    return { allowed: true }
+  }
+
   const ai = await moderateWithDeepSeek(prompt)
   if (!ai.safe) {
     return { allowed: false, reason: ai.reason ?? 'Контент не прошёл модерацию' }

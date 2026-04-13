@@ -22,7 +22,7 @@ export async function generateRoutes(app: FastifyInstance) {
     if (!prompt?.trim()) return reply.code(400).send({ error: 'prompt required' })
 
     // Moderation check
-    const moderation = await moderatePrompt(prompt)
+    const moderation = await moderatePrompt(prompt, modelId)
     if (!moderation.allowed) {
       return reply.code(403).send({ error: moderation.reason ?? 'Content not allowed' })
     }
