@@ -88,51 +88,61 @@ export default function FeedPage() {
   const pullStartY = useRef(0)
   const [pullDistance, setPullDistance] = useState(0)
 
-  const refresh = useCallback(async () => {
-    setRefreshing(true)
-    setItems([])
-    setCursor(null)
-    setHasMore(true)
+  const loadingRef = useRef(false)
+  const cursorRef = useRef<string | null>(null)
+
+  const loadFeed = useCallback(async (reset = false) => {
+    if (loadingRef.current) return
+    loadingRef.current = true
+    setLoading(true)
     try {
-      const data = await getFeed(filter)
-      setItems(data.items)
+      const cur = reset ? undefined : cursorRef.current ?? undefined
+      const data = await getFeed(filter, cur)
+      if (reset) {
+        setItems(data.items)
+      } else {
+        setItems(prev => {
+          const existingIds = new Set(prev.map(i => i.id))
+          const newItems = data.items.filter(i => !existingIds.has(i.id))
+          return [...prev, ...newItems]
+        })
+      }
+      cursorRef.current = data.nextCursor
       setCursor(data.nextCursor)
       setHasMore(!!data.nextCursor)
+    } finally {
+      loadingRef.current = false
+      setLoading(false)
+    }
+  }, [filter])
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true)
+    cursorRef.current = null
+    try {
+      await loadFeed(true)
     } finally {
       setRefreshing(false)
       setPullDistance(0)
     }
-  }, [filter])
-
-  const load = useCallback(async (reset = false) => {
-    if (loading) return
-    setLoading(true)
-    try {
-      const cur = reset ? undefined : cursor ?? undefined
-      const data = await getFeed(filter, cur)
-      setItems(prev => reset ? data.items : [...prev, ...data.items])
-      setCursor(data.nextCursor)
-      setHasMore(!!data.nextCursor)
-    } finally {
-      setLoading(false)
-    }
-  }, [filter, cursor, loading])
+  }, [loadFeed])
 
   useEffect(() => {
     setItems([])
+    cursorRef.current = null
     setCursor(null)
     setHasMore(true)
-    load(true)
+    loadFeed(true)
   }, [filter])
 
   useEffect(() => {
     if (!loaderRef.current) return
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && hasMore && !loading) load()
+      if (e.isIntersecting && hasMore && !loading) loadFeed()
     }, { threshold: 0.1 })
     obs.observe(loaderRef.current)
     return () => obs.disconnect()
-  }, [hasMore, loading, load])
+  }, [hasMore, loading, loadFeed])
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX

@@ -469,52 +469,85 @@ function CommentNode({ comment, isAdmin, onReply, onDelete, onLike, onDeleteRepl
   depth?: number
 }) {
   const c = comment
+  const avatarSize = depth > 0 ? 28 : 32
+  const [showReplies, setShowReplies] = useState(true)
+
   return (
-    <div style={{ paddingLeft: depth > 0 ? 24 : 0 }}>
-      <div className="viewer-comment">
-        <div className="viewer-comment-header">
-          {c.user.photoUrl
-            ? <img src={c.user.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-            : <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff' }}>{c.user.firstName[0]}</div>
-          }
-          <span style={{ fontSize: 13, fontWeight: 500 }}>{c.user.firstName}</span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginLeft: 'auto' }}>
-            {new Date(c.createdAt).toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
-          </span>
+    <>
+      <div style={{ display: 'flex', gap: 10, padding: `${depth > 0 ? 6 : 10}px 16px`, marginLeft: depth > 0 ? 32 : 0 }}>
+        {/* Avatar */}
+        {c.user.photoUrl
+          ? <img src={c.user.photoUrl} alt="" style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          : <div style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: depth > 0 ? 10 : 12, color: '#fff', flexShrink: 0 }}>{c.user.firstName[0]}</div>
+        }
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13 }}>
+            <span style={{ fontWeight: 600 }}>{c.user.firstName} </span>
+            <span style={{ color: 'rgba(255,255,255,0.85)' }}>{c.text}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+              {timeAgo(c.createdAt)}
+            </span>
+            {c.likesCount > 0 && (
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+                {c.likesCount} {c.likesCount === 1 ? 'like' : 'likes'}
+              </span>
+            )}
+            {depth === 0 && (
+              <button onClick={() => onReply(c.id, c.user.firstName)}
+                style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>
+                Reply
+              </button>
+            )}
+            {(c.isOwn || isAdmin) && (
+              <button onClick={() => depth > 0 ? onDeleteReply(c.id, c.parentId!) : onDelete(c.id)}
+                style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+                Delete
+              </button>
+            )}
+          </div>
         </div>
-        <div style={{ fontSize: 13, marginTop: 4, paddingLeft: 32 }}>{c.text}</div>
-        <div style={{ display: 'flex', gap: 14, paddingLeft: 32, marginTop: 6 }}>
-          {/* Like */}
-          <button onClick={() => depth > 0 ? onLikeReply(c.id, c.parentId!) : onLike(c.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: c.isLiked ? '#ff4757' : 'rgba(255,255,255,0.4)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={c.isLiked ? '#ff4757' : 'none'} stroke={c.isLiked ? '#ff4757' : 'currentColor'} strokeWidth={2}>
-              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-            </svg>
-            {c.likesCount > 0 && c.likesCount}
-          </button>
-          {/* Reply (only on top-level) */}
-          {depth === 0 && (
-            <button onClick={() => onReply(c.id, c.user.firstName)}
-              style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-              Reply
-            </button>
-          )}
-          {/* Delete (own or admin) */}
-          {(c.isOwn || isAdmin) && (
-            <button onClick={() => depth > 0 ? onDeleteReply(c.id, c.parentId!) : onDelete(c.id)}
-              style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
-              Delete
-            </button>
-          )}
-        </div>
+
+        {/* Like button (right side) */}
+        <button onClick={() => depth > 0 ? onLikeReply(c.id, c.parentId!) : onLike(c.id)}
+          style={{ flexShrink: 0, paddingTop: 4 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill={c.isLiked ? '#ff4757' : 'none'} stroke={c.isLiked ? '#ff4757' : 'rgba(255,255,255,0.3)'} strokeWidth={2}>
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          </svg>
+        </button>
       </div>
-      {/* Replies */}
-      {c.replies && c.replies.length > 0 && c.replies.map(r => (
-        <CommentNode key={r.id} comment={r} isAdmin={isAdmin} depth={1}
-          onReply={onReply} onDelete={onDelete} onLike={onLike}
-          onDeleteReply={onDeleteReply} onLikeReply={onLikeReply}
-        />
-      ))}
-    </div>
+
+      {/* Replies toggle */}
+      {depth === 0 && c.replies && c.replies.length > 0 && (
+        <>
+          <button onClick={() => setShowReplies(!showReplies)}
+            style={{ marginLeft: 58, fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, padding: '4px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 20, height: 0.5, background: 'rgba(255,255,255,0.2)' }} />
+            {showReplies ? `Hide replies (${c.replies.length})` : `View replies (${c.replies.length})`}
+          </button>
+          {showReplies && c.replies.map(r => (
+            <CommentNode key={r.id} comment={r} isAdmin={isAdmin} depth={1}
+              onReply={onReply} onDelete={onDelete} onLike={onLike}
+              onDeleteReply={onDeleteReply} onLikeReply={onLikeReply}
+            />
+          ))}
+        </>
+      )}
+    </>
   )
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'now'
+  if (min < 60) return `${min}m`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}h`
+  const days = Math.floor(hr / 24)
+  if (days < 7) return `${days}d`
+  return `${Math.floor(days / 7)}w`
 }
