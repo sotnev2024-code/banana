@@ -141,7 +141,11 @@ export function startGenerationWorker(connection: ConnectionOptions) {
           include: { user: true },
         })
         if (gen?.user) {
+          console.log(`Sending result to user ${gen.user.telegramId}, localUrl=${localUrl}`)
           await sendResultToUser(gen, localUrl, result.resultUrl)
+          console.log(`Result sent successfully to user ${gen.user.telegramId}`)
+        } else {
+          console.log(`No user found for generation ${generationId}`)
         }
       } catch (e) {
         console.error('Failed to notify user:', e)
@@ -180,8 +184,9 @@ async function sendResultToUser(gen: any, localUrl: string, originalUrl: string)
 
   const tgApi = `https://api.telegram.org/bot${BOT_TOKEN}`
 
+  let tgRes: any
   if (gen.type === 'IMAGE') {
-    await fetch(`${tgApi}/sendPhoto`, {
+    tgRes = await fetch(`${tgApi}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -192,7 +197,7 @@ async function sendResultToUser(gen: any, localUrl: string, originalUrl: string)
       }),
     })
   } else if (gen.type === 'VIDEO' || gen.type === 'MOTION') {
-    await fetch(`${tgApi}/sendVideo`, {
+    tgRes = await fetch(`${tgApi}/sendVideo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -203,7 +208,7 @@ async function sendResultToUser(gen: any, localUrl: string, originalUrl: string)
       }),
     })
   } else if (gen.type === 'MUSIC') {
-    await fetch(`${tgApi}/sendAudio`, {
+    tgRes = await fetch(`${tgApi}/sendAudio`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -213,5 +218,12 @@ async function sendResultToUser(gen: any, localUrl: string, originalUrl: string)
         reply_markup: inlineKeyboard,
       }),
     })
+  }
+
+  // Log result
+  if (tgRes) {
+    const body = await tgRes.json().catch(() => ({}))
+    if (!body.ok) console.error('Telegram send failed:', JSON.stringify(body))
+    else console.log('Telegram send ok')
   }
 }
