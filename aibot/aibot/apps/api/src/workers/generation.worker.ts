@@ -79,12 +79,21 @@ export function startGenerationWorker(connection: ConnectionOptions) {
       try {
         const { execSync } = require('child_process')
         const ext = result.resultUrl.match(/\.(jpeg|jpg|png|webp|mp4|mp3|wav)/)?.[0] ?? '.bin'
-        const filename = `${generationId}${ext}`
+        const origFilename = `${generationId}${ext}`
         execSync(`mkdir -p /opt/banana/uploads/gen/thumb`)
-        execSync(`curl -s -4 -o /opt/banana/uploads/gen/${filename} "${result.resultUrl}"`, { timeout: 30000 })
-        // Create thumbnail for images
-        if (['.jpeg', '.jpg', '.png', '.webp'].includes(ext)) {
-          execSync(`convert /opt/banana/uploads/gen/${filename} -resize 400x -quality 80 /opt/banana/uploads/gen/thumb/${filename} 2>/dev/null || true`, { timeout: 10000 })
+        execSync(`curl -s -4 -o /opt/banana/uploads/gen/${origFilename} "${result.resultUrl}"`, { timeout: 30000 })
+
+        // Convert images to WebP for faster loading
+        let filename = origFilename
+        if (['.jpeg', '.jpg', '.png'].includes(ext)) {
+          const webpName = `${generationId}.webp`
+          execSync(`cwebp -q 85 /opt/banana/uploads/gen/${origFilename} -o /opt/banana/uploads/gen/${webpName} 2>/dev/null || true`, { timeout: 15000 })
+          // Create WebP thumbnail
+          execSync(`cwebp -q 75 -resize 400 0 /opt/banana/uploads/gen/${origFilename} -o /opt/banana/uploads/gen/thumb/${webpName} 2>/dev/null || true`, { timeout: 10000 })
+          // Check if WebP was created
+          try { execSync(`test -s /opt/banana/uploads/gen/${webpName}`); filename = webpName } catch { filename = origFilename }
+          // Fallback thumb
+          execSync(`convert /opt/banana/uploads/gen/${origFilename} -resize 400x -quality 80 /opt/banana/uploads/gen/thumb/${origFilename} 2>/dev/null || true`, { timeout: 10000 })
         }
         localUrl = `${process.env.API_URL ?? 'https://picpulse.fun'}/uploads/gen/${filename}`
       } catch (e) {

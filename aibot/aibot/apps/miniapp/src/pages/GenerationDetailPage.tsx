@@ -43,6 +43,15 @@ export default function GenerationDetailPage() {
     if (!currentItem) return
     setDetail(null)
     getFeedItem(currentItem.id).then(setDetail).catch(() => {})
+
+    // Preload adjacent images
+    for (const offset of [-1, 1, 2]) {
+      const adj = items[currentIndex + offset]
+      if (adj?.resultUrl && adj.type === 'IMAGE') {
+        const img = new Image()
+        img.src = adj.resultUrl
+      }
+    }
   }, [currentIndex, items])
 
   // Scroll snap handler
