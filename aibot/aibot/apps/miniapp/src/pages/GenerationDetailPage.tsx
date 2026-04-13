@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getFeed, getFeedItem, toggleLike, addFavorite, removeFavorite, addComment, deleteComment, toggleCommentLike, getComments, reportGeneration, type Generation, type GenerationDetail, type CommentItem } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
-import { t } from '../i18n'
+import { t, getLang } from '../i18n'
 import { toast } from '../components/ui/Toast'
 
 export default function GenerationDetailPage() {
@@ -128,6 +128,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
   const [commentText, setCommentText] = useState('')
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null)
   const [reported, setReported] = useState(false)
+  const navigate = useNavigate()
   const isAdmin = user && ['1724263429'].includes(user.telegramId)
   const [showReport, setShowReport] = useState(false)
   const [reportReason, setReportReason] = useState('')
@@ -281,6 +282,34 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
           </svg>
         </button>
 
+        {/* Delete own */}
+        {detail?.userId === user?.id && (
+          <button className="viewer-action-btn" onClick={async () => {
+            const tg = window.Telegram?.WebApp
+            const doDelete = () => {
+              import('../api/client').then(({ deleteComment: _dc, ...api }) => {
+                // We need a delete generation endpoint
+                fetch(`${import.meta.env.VITE_API_URL}/generate/${item.id}`, {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt')}` },
+                }).then(() => {
+                  toast(getLang() === 'en' ? 'Deleted' : 'Удалено')
+                  navigate('/feed')
+                })
+              })
+            }
+            if (tg?.showConfirm) {
+              tg.showConfirm(getLang() === 'en' ? 'Delete this generation?' : 'Удалить эту генерацию?', (ok: boolean) => { if (ok) doDelete() })
+            } else {
+              if (confirm('Delete?')) doDelete()
+            }
+          }} style={{ opacity: 0.5 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
+              <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/>
+            </svg>
+          </button>
+        )}
+
         {/* Report */}
         <button className="viewer-action-btn" onClick={() => {
           if (reported) {
@@ -296,10 +325,10 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
       </div>
 
       {/* Bottom info */}
-      <div className="viewer-bottom" onClick={onTogglePromptPanel}>
+      <div className="viewer-bottom">
         {/* Author */}
         {item.user && (
-          <div className="viewer-author">
+          <div className="viewer-author" onClick={(e) => { e.stopPropagation(); if (detail?.userId) navigate(`/user/${detail.userId}`) }} style={{ cursor: 'pointer' }}>
             {item.user.photoUrl
               ? <img src={item.user.photoUrl} alt="" className="viewer-author-avatar" />
               : <div className="viewer-author-avatar-placeholder">{item.user.firstName[0]}</div>

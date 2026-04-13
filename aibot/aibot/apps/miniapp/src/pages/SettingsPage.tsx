@@ -2,19 +2,20 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { updateSettings } from '../api/client'
-import { t } from '../i18n'
+import { t, getLang } from '../i18n'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { user, refresh } = useAuth()
   const [lang, setLang] = useState(user?.lang ?? 'ru')
   const [theme, setTheme] = useState(user?.theme ?? 'auto')
+  const [minDonate, setMinDonate] = useState(String(user?.minDonate ?? 1))
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateSettings({ lang, theme })
+      await updateSettings({ lang, theme, minDonate: Number(minDonate) || 1 })
       await refresh()
       navigate(-1)
     } catch (e: any) {
@@ -64,6 +65,21 @@ export default function SettingsPage() {
                 <RadioDot selected={theme === item.id} />
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Min donate */}
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 10 }}>
+            {getLang() === 'en' ? 'Minimum donation' : 'Минимальный донат'}
+          </div>
+          <div className="card" style={{ padding: 14 }}>
+            <input type="number" value={minDonate} onChange={e => setMinDonate(e.target.value)}
+              min="1" max="10000" className="setting-text-input"
+              placeholder={getLang() === 'en' ? 'Min tokens' : 'Мин. токенов'} />
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>
+              {getLang() === 'en' ? 'Users cannot donate less than this amount' : 'Пользователи не смогут отправить меньше этой суммы'}
+            </div>
           </div>
         </div>
 

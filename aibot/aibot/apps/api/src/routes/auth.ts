@@ -92,6 +92,7 @@ export function sanitizeUser(user: any) {
     lastDailyAt: user.lastDailyAt?.toISOString() ?? null,
     lang: user.lang ?? 'ru',
     theme: user.theme ?? 'auto',
+    minDonate: user.minDonate ?? 1,
     createdAt: user.createdAt?.toISOString(),
   }
 }

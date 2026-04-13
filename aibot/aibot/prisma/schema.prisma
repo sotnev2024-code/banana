@@ -19,6 +19,7 @@ model User {
   isBlocked    Boolean       @default(false)
   lang         String        @default("ru")
   theme        String        @default("auto")
+  minDonate    Int           @default(1)
   referralCode String        @unique @default(cuid())
   referrerId   String?
   referrer     User?         @relation("Referrals", fields: [referrerId], references: [id])
@@ -37,6 +38,8 @@ model User {
   likes        Like[]
   comments     Comment[]
   commentLikes CommentLike[]
+  donationsSent     Donation[] @relation("DonationsSent")
+  donationsReceived Donation[] @relation("DonationsReceived")
   reports      Report[]   @relation("ReportAuthor")
   achievements UserAchievement[]
   promoCodes   PromoCodeUsage[]
@@ -70,6 +73,20 @@ model Generation {
   @@index([type])
   @@index([status])
   @@index([isPublic, createdAt])
+}
+
+model Donation {
+  id           String   @id @default(cuid())
+  fromUserId   String
+  fromUser     User     @relation("DonationsSent", fields: [fromUserId], references: [id])
+  toUserId     String
+  toUser       User     @relation("DonationsReceived", fields: [toUserId], references: [id])
+  amount       Int
+  message      String?
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId])
+  @@index([fromUserId])
 }
 
 model Report {

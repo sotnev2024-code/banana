@@ -93,4 +93,21 @@ export async function generateRoutes(app: FastifyInstance) {
 
     return reply.send(gen)
   })
+
+  // DELETE /generate/:id — delete own generation
+  app.delete('/:id', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const { id } = req.params as { id: string }
+
+    const gen = await prisma.generation.findFirst({ where: { id, userId } })
+    if (!gen) return reply.code(404).send({ error: 'Not found' })
+
+    await prisma.favorite.deleteMany({ where: { generationId: id } })
+    await prisma.like.deleteMany({ where: { generationId: id } })
+    await prisma.comment.deleteMany({ where: { generationId: id } })
+    await prisma.report.deleteMany({ where: { generationId: id } })
+    await prisma.generation.delete({ where: { id } })
+
+    return reply.send({ ok: true })
+  })
 }

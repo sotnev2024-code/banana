@@ -33,8 +33,16 @@ export const getMyGenerations = (cursor?: string) =>
   req<PaginatedGenerations>('GET', `/me/generations${cursor ? `?cursor=${cursor}` : ''}`)
 export const getMyTransactions = () =>
   req<Transaction[]>('GET', '/me/transactions')
-export const updateSettings = (settings: { lang?: string; theme?: string }) =>
+export const updateSettings = (settings: { lang?: string; theme?: string; minDonate?: number }) =>
   req<UserFull>('PUT', '/me/settings', settings)
+
+// Public profiles
+export const getPublicProfile = (id: string) =>
+  req<PublicProfile>('GET', `/users/${id}`)
+export const getUserGenerations = (id: string, cursor?: string) =>
+  req<PaginatedGenerations>('GET', `/users/${id}/generations${cursor ? `?cursor=${cursor}` : ''}`)
+export const sendDonate = (toUserId: string, amount: number, message?: string) =>
+  req<{ ok: boolean }>('POST', `/users/${toUserId}/donate`, { amount, message })
 
 // Feed
 export const getFeed = (type?: string, cursor?: string) => {
@@ -139,6 +147,7 @@ export interface UserFull {
   lastDailyAt?: string
   lang: string
   theme: string
+  minDonate: number
   createdAt: string
 }
 
@@ -219,6 +228,17 @@ export interface AchievementInfo {
   reward: number
   unlocked: boolean
   unlockedAt?: string
+}
+
+export interface PublicProfile {
+  id: string
+  firstName: string
+  username?: string
+  photoUrl?: string
+  minDonate: number
+  createdAt: string
+  generationsCount: number
+  totalLikes: number
 }
 
 export interface UserStats {

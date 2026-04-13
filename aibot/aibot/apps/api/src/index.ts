@@ -11,6 +11,7 @@ import { generateRoutes } from './routes/generate'
 import { paymentRoutes } from './routes/payment'
 import { plansRoutes, profileRoutes } from './routes/profile'
 import { uploadRoutes } from './routes/upload'
+import { usersRoutes } from './routes/users'
 import { adminRoutes } from './routes/admin'
 import { startGenerationWorker } from './workers/generation.worker'
 
@@ -45,6 +46,7 @@ async function main() {
   app.register(paymentRoutes, { prefix: '/payment' })
   app.register(profileRoutes, { prefix: '/me' })
   app.register(uploadRoutes,  { prefix: '/upload' })
+  app.register(usersRoutes,   { prefix: '/users' })
   app.register(adminRoutes,   { prefix: '/admin' })
 
   app.get('/health', async () => ({ ok: true }))
