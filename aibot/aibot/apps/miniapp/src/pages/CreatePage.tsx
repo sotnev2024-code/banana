@@ -115,7 +115,7 @@ export default function CreatePage() {
   const [type, setType] = useState<string>('IMAGE')
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [prompt, setPrompt] = useState(state?.prompt ?? '')
-  const [files, setFiles] = useState<{ file: File; preview: string; type: 'image' | 'video' | 'audio' }[]>([])
+  const [files, setFiles] = useState<{ file: File; preview: string; type: 'image' | 'video' | 'audio'; duration?: number }[]>([])
   const [modelSettings, setModelSettings] = useState<Record<string, string | number | boolean>>({})
   const [genState, setGenState] = useState<GenState>('idle')
   const [resultUrl, setResultUrl] = useState<string | null>(null)
@@ -167,28 +167,45 @@ export default function CreatePage() {
     return () => clearInterval(interval)
   }, [genState, genId])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files ?? [])
     const maxImg = model?.maxImages ?? 1
     const maxVid = model?.maxVideos ?? 0
     const maxAud = model?.maxAudios ?? 0
 
-    const additions = newFiles.map(file => {
+    const additions = await Promise.all(newFiles.map(async file => {
       const ft = file.type.startsWith('video/') ? 'video' as const
         : file.type.startsWith('audio/') ? 'audio' as const
         : 'image' as const
-      return { file, preview: URL.createObjectURL(file), type: ft }
-    })
+      const preview = URL.createObjectURL(file)
+      let duration: number | undefined
+
+      // Get duration for video/audio
+      if (ft === 'video' || ft === 'audio') {
+        duration = await getMediaDuration(preview, ft)
+      }
+
+      return { file, preview, type: ft, duration }
+    }))
 
     setFiles(prev => {
       const combined = [...prev, ...additions]
-      // Enforce limits
       const images = combined.filter(f => f.type === 'image').slice(0, maxImg)
       const videos = combined.filter(f => f.type === 'video').slice(0, maxVid || 0)
       const audios = combined.filter(f => f.type === 'audio').slice(0, maxAud || 0)
       return [...images, ...videos, ...audios]
     })
-    e.target.value = '' // reset input
+    e.target.value = ''
+  }
+
+  function getMediaDuration(url: string, type: 'video' | 'audio'): Promise<number> {
+    return new Promise(resolve => {
+      const el = document.createElement(type)
+      el.preload = 'metadata'
+      el.onloadedmetadata = () => { resolve(Math.ceil(el.duration)); URL.revokeObjectURL(url) }
+      el.onerror = () => resolve(0)
+      el.src = url
+    })
   }
 
   const removeFile = (index: number) => {
@@ -217,8 +234,13 @@ export default function CreatePage() {
         const url = await uploadFile(f.file)
         uploadedUrls.push(url)
       }
+      // Pass video duration in settings for accurate pricing
+      const genSettings = { ...modelSettings }
+      const videoDur = files.find(f => f.type === 'video')?.duration
+      if (videoDur) (genSettings as any)._videoDuration = videoDur
+
       const gen = await createGeneration({
-        model: selectedModel, prompt, isPublic, settings: modelSettings,
+        model: selectedModel, prompt, isPublic, settings: genSettings,
         imageUrl: uploadedUrls[0],
         imageUrls: uploadedUrls.length > 1 ? uploadedUrls : undefined,
       })
@@ -314,7 +336,10 @@ export default function CreatePage() {
                   {files.map((f, i) => (
                     <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 8, overflow: 'hidden', background: 'var(--surface2)' }}>
                       {f.type === 'image' && <img src={f.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      {f.type === 'video' && <video src={f.preview} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      {f.type === 'video' && <>
+                        <video src={f.preview} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {f.duration && <div style={{ position: 'absolute', bottom: 2, left: 2, fontSize: 9, color: '#fff', background: 'rgba(0,0,0,0.6)', padding: '1px 4px', borderRadius: 3 }}>{f.duration}s</div>}
+                      </>}
                       {f.type === 'audio' && (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth={1.5}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/></svg>
@@ -392,7 +417,7 @@ export default function CreatePage() {
         )}
 
         <button className="btn-primary" onClick={handleGenerate} disabled={!prompt.trim() || !selectedModel}>
-          {t('create.generate')} — {selectedModel ? calculatePrice(selectedModel, modelSettings) : 0}
+          {t('create.generate')} — {selectedModel ? calculatePrice(selectedModel, modelSettings, files.find(f => f.type === 'video')?.duration) : 0}
         </button>
       </div>
     </>

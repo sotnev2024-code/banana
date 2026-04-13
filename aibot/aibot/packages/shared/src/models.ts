@@ -487,7 +487,7 @@ export const getModelsByType = (type: GenerationType) => MODELS.filter(m => m.ty
 // Markup multiplier for profit margin (~70%)
 const MARKUP = 2
 
-export function calculatePrice(modelId: string, settings: Record<string, string | number | boolean> = {}): number {
+export function calculatePrice(modelId: string, settings: Record<string, string | number | boolean> = {}, videoDuration?: number): number {
   const model = getModel(modelId)
   if (!model) return 0
 
@@ -570,13 +570,15 @@ export function calculatePrice(modelId: string, settings: Record<string, string 
     case 'kling-3-0-motion': {
       const mode = String(settings.mode ?? '720p')
       const rate = mode === '1080p' ? 27 : 20
-      cost = Math.ceil(rate * 10) // estimate ~10 sec, actual = video duration
+      const dur3m = videoDuration ?? 10
+      cost = Math.ceil(rate * dur3m)
       break
     }
     case 'kling-2-6-motion': {
       const mode = String(settings.mode ?? '720p')
       const rate = mode === '1080p' ? 9 : 6
-      cost = Math.ceil(rate * 10) // estimate ~10 sec
+      const dur2m = videoDuration ?? 10
+      cost = Math.ceil(rate * dur2m)
       break
     }
     case 'kling-avatar':

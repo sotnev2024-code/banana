@@ -30,8 +30,9 @@ export async function generateRoutes(app: FastifyInstance) {
     const model = getModel(modelId)
     if (!model) return reply.code(400).send({ error: 'Unknown model' })
 
-    // Calculate dynamic price based on settings
-    const price = calculatePrice(modelId, settings)
+    // Calculate dynamic price based on settings + video duration
+    const videoDuration = (settings as any)._videoDuration as number | undefined
+    const price = calculatePrice(modelId, settings, videoDuration)
 
     // Check balance
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
