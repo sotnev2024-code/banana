@@ -236,6 +236,7 @@ export interface PublicProfile {
   username?: string
   photoUrl?: string
   minDonate: number
+  canReceiveDonations: boolean
   createdAt: string
   generationsCount: number
   totalLikes: number

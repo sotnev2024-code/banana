@@ -103,10 +103,15 @@ export default function UserProfilePage() {
         </div>
 
         {/* Donate button */}
-        {!isMe && (
+        {!isMe && profile.canReceiveDonations && (
           <button className="btn-primary" onClick={() => setShowDonate(true)}>
             {getLang() === 'en' ? `Donate tokens (min ${profile.minDonate})` : `Донат токенов (мин ${profile.minDonate})`}
           </button>
+        )}
+        {!isMe && !profile.canReceiveDonations && (
+          <div style={{ padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>
+            {getLang() === 'en' ? 'This user cannot receive donations yet' : 'Этот пользователь пока не может получать донаты'}
+          </div>
         )}
 
         {/* Donate panel */}
@@ -122,7 +127,14 @@ export default function UserProfilePage() {
             </div>
             <input type="number" value={donateAmount} onChange={e => setDonateAmount(e.target.value)}
               placeholder={getLang() === 'en' ? `Amount (min ${profile.minDonate})` : `Сумма (мин ${profile.minDonate})`}
-              className="setting-text-input" style={{ marginBottom: 8 }} />
+              className="setting-text-input" style={{ marginBottom: 4 }} />
+            {donateAmount && Number(donateAmount) > 0 && (
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8, paddingLeft: 2 }}>
+                {getLang() === 'en'
+                  ? `${profile.firstName} receives ${Math.floor(Number(donateAmount) * 0.9)} tokens (10% fee)`
+                  : `${profile.firstName} получит ${Math.floor(Number(donateAmount) * 0.9)} токенов (комиссия 10%)`}
+              </div>
+            )}
             <input type="text" value={donateMsg} onChange={e => setDonateMsg(e.target.value)}
               placeholder={getLang() === 'en' ? 'Message (optional)' : 'Сообщение (необязательно)'}
               className="setting-text-input" style={{ marginBottom: 10 }} />

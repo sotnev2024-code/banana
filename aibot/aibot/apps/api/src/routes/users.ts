@@ -11,13 +11,12 @@ export async function usersRoutes(app: FastifyInstance) {
       select: {
         id: true, firstName: true, username: true, photoUrl: true,
         minDonate: true, createdAt: true,
-        _count: { select: { generations: { where: { status: 'DONE', isPublic: true } } } },
+        _count: { select: { generations: { where: { status: 'DONE', isPublic: true } }, payments: { where: { status: 'SUCCEEDED' } } } },
       },
     })
 
     if (!user) return reply.code(404).send({ error: 'Not found' })
 
-    // Count total likes on user's generations
     const likesResult = await prisma.generation.aggregate({
       where: { userId: id, status: 'DONE', isPublic: true },
       _sum: { likesCount: true },
@@ -29,6 +28,7 @@ export async function usersRoutes(app: FastifyInstance) {
       username: user.username,
       photoUrl: user.photoUrl,
       minDonate: user.minDonate,
+      canReceiveDonations: user._count.payments > 0,
       createdAt: user.createdAt.toISOString(),
       generationsCount: user._count.generations,
       totalLikes: likesResult._sum.likesCount ?? 0,
@@ -82,6 +82,19 @@ export async function usersRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid amount' })
     }
 
+    // Check both users have made at least one payment
+    const [senderPayments, recipientPayments] = await Promise.all([
+      prisma.payment.count({ where: { userId: fromUserId, status: 'SUCCEEDED' } }),
+      prisma.payment.count({ where: { userId: toUserId, status: 'SUCCEEDED' } }),
+    ])
+
+    if (senderPayments === 0) {
+      return reply.code(403).send({ error: 'Top up your balance first to enable donations' })
+    }
+    if (recipientPayments === 0) {
+      return reply.code(403).send({ error: 'This user cannot receive donations yet' })
+    }
+
     // Check min donate
     const toUser = await prisma.user.findUnique({ where: { id: toUserId }, select: { minDonate: true, telegramId: true, firstName: true } })
     if (!toUser) return reply.code(404).send({ error: 'User not found' })
@@ -90,21 +103,25 @@ export async function usersRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: `Minimum donation: ${toUser.minDonate} tokens` })
     }
 
-    // Check sender balance
+    // 10% commission
+    const commission = Math.ceil(amount * 0.1)
+    const recipientAmount = amount - commission
+
+    // Check sender balance (full amount charged)
     const fromUser = await prisma.user.findUnique({ where: { id: fromUserId }, select: { balance: true, firstName: true } })
     if (!fromUser || fromUser.balance < amount) {
       return reply.code(402).send({ error: 'Insufficient balance' })
     }
 
-    // Transfer
+    // Transfer with commission
     await prisma.$transaction([
       prisma.user.update({ where: { id: fromUserId }, data: { balance: { decrement: amount } } }),
-      prisma.user.update({ where: { id: toUserId }, data: { balance: { increment: amount } } }),
+      prisma.user.update({ where: { id: toUserId }, data: { balance: { increment: recipientAmount } } }),
       prisma.transaction.create({
         data: { userId: fromUserId, amount: -amount, type: 'SPEND', description: `Donate to ${toUser.firstName}` },
       }),
       prisma.transaction.create({
-        data: { userId: toUserId, amount, type: 'BONUS', description: `Donate from ${fromUser.firstName}${message ? ': ' + message.slice(0, 100) : ''}` },
+        data: { userId: toUserId, amount: recipientAmount, type: 'BONUS', description: `Donate from ${fromUser.firstName}${message ? ': ' + message.slice(0, 100) : ''} (${commission} fee)` },
       }),
       prisma.donation.create({
         data: { fromUserId, toUserId, amount, message: message?.slice(0, 200) ?? null },
@@ -115,7 +132,7 @@ export async function usersRoutes(app: FastifyInstance) {
     try {
       const BOT_TOKEN = process.env.BOT_TOKEN
       if (BOT_TOKEN) {
-        let text = `+${amount} tokens from ${fromUser.firstName}`
+        let text = `+${recipientAmount} tokens from ${fromUser.firstName}`
         if (message) text += `\n\n"${message.slice(0, 200)}"`
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: 'POST',
