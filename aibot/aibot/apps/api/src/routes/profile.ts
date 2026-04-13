@@ -3,6 +3,7 @@ import { prisma } from '../index'
 import { TOKEN_PLANS, getDailyBonus, ACHIEVEMENTS, REFERRAL_BONUS } from '@aibot/shared'
 import { sanitizeUser } from './auth'
 import { checkAchievements } from '../achievements'
+import { notify } from '../notifications'
 
 export async function plansRoutes(app: FastifyInstance) {
   app.get('/', async (_req, reply) => {
@@ -260,5 +261,55 @@ export async function profileRoutes(app: FastifyInstance) {
       totalSpent: user.totalSpent,
       memberSince: user.createdAt.toISOString(),
     })
+  })
+
+  // ═══ NOTIFICATIONS ═══
+
+  app.get('/notifications', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const items = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+    const unreadCount = await prisma.notification.count({ where: { userId, isRead: false } })
+    return reply.send({ items, unreadCount })
+  })
+
+  app.post('/notifications/read', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    await prisma.notification.updateMany({ where: { userId, isRead: false }, data: { isRead: true } })
+    return reply.send({ ok: true })
+  })
+
+  // ═══ FOLLOW ═══
+
+  app.post('/follow/:id', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const { id: targetId } = req.params as { id: string }
+    if (userId === targetId) return reply.code(400).send({ error: 'Cannot follow yourself' })
+
+    const existing = await prisma.follow.findUnique({
+      where: { followerId_followingId: { followerId: userId, followingId: targetId } },
+    })
+
+    if (existing) {
+      await prisma.follow.delete({ where: { id: existing.id } })
+      return reply.send({ following: false })
+    } else {
+      await prisma.follow.create({ data: { followerId: userId, followingId: targetId } })
+      const follower = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } })
+      notify(targetId, 'follow', `${follower?.firstName} started following you`)
+      return reply.send({ following: true })
+    }
+  })
+
+  app.get('/following', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
+    const { userId } = req.user as { userId: string }
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      include: { following: { select: { id: true, firstName: true, username: true, photoUrl: true } } },
+    })
+    return reply.send(follows.map(f => f.following))
   })
 }

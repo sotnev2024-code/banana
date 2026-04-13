@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { claimDailyBonus, getStats, type UserStats } from '../api/client'
+import { claimDailyBonus, getStats, getNotifications, type UserStats } from '../api/client'
 import { getDailyBonus } from '@aibot/shared'
-import { t } from '../i18n'
+import { t, getLang } from '../i18n'
 
 export default function ProfilePage() {
   const { user, refresh } = useAuth()
@@ -12,9 +12,11 @@ export default function ProfilePage() {
   const [dailyClaimed, setDailyClaimed] = useState(false)
   const [dailyLoading, setDailyLoading] = useState(false)
   const [dailyResult, setDailyResult] = useState<{ tokens: number; streak: number } | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     getStats().then(setStats).catch(() => {})
+    getNotifications().then(d => setUnreadCount(d.unreadCount)).catch(() => {})
   }, [])
 
   const canClaimDaily = user && (!user.lastDailyAt || isNewDay(user.lastDailyAt))
@@ -120,6 +122,7 @@ export default function ProfilePage() {
 
         {/* Menu sections */}
         <div className="card" style={{ overflow: 'hidden' }}>
+          <MenuItem icon={<IconBell />} label={getLang() === 'en' ? 'Notifications' : 'Уведомления'} badge={unreadCount} onClick={() => navigate('/notifications')} />
           <MenuItem icon={<IconStar />} label={t('profile.favorites')} onClick={() => navigate('/favorites')} />
           <MenuItem icon={<IconTrophy />} label={t('profile.achievements')} onClick={() => navigate('/achievements')} />
           <MenuItem icon={<IconUsers />} label={t('profile.inviteFriends')} subtitle={t('profile.inviteBonus')} onClick={() => navigate('/referral')} />
@@ -133,8 +136,8 @@ export default function ProfilePage() {
   )
 }
 
-function MenuItem({ icon, label, subtitle, onClick, last }: {
-  icon: React.ReactNode; label: string; subtitle?: string; onClick: () => void; last?: boolean
+function MenuItem({ icon, label, subtitle, badge, onClick, last }: {
+  icon: React.ReactNode; label: string; subtitle?: string; badge?: number; onClick: () => void; last?: boolean
 }) {
   return (
     <div className="menu-item" onClick={onClick} style={!last ? { borderBottom: '0.5px solid var(--border)' } : undefined}>
@@ -143,9 +146,15 @@ function MenuItem({ icon, label, subtitle, onClick, last }: {
         <div style={{ fontSize: 15 }}>{label}</div>
         {subtitle && <div style={{ fontSize: 12, color: 'var(--text2)' }}>{subtitle}</div>}
       </div>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--text3)" strokeWidth={1.5} strokeLinecap="round">
-        <path d="M6 4l4 4-4 4"/>
-      </svg>
+      {badge && badge > 0 ? (
+        <div style={{ minWidth: 20, height: 20, borderRadius: 10, background: 'var(--danger)', color: '#fff', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>
+          {badge}
+        </div>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--text3)" strokeWidth={1.5} strokeLinecap="round">
+          <path d="M6 4l4 4-4 4"/>
+        </svg>
+      )}
     </div>
   )
 }
@@ -157,6 +166,7 @@ function isNewDay(lastDailyAt: string): boolean {
 }
 
 // SVG Icons
+const IconBell = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
 const IconStar = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
 const IconTrophy = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 9V2h12v7a6 6 0 11-12 0z"/><path d="M6 4H3v3a3 3 0 003 3"/><path d="M18 4h3v3a3 3 0 01-3 3"/><path d="M12 15v4M8 22h8"/></svg>
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="9" cy="7" r="3"/><path d="M2 20c0-3 2.7-6 7-6s7 3 7 6"/><circle cx="17" cy="8" r="2.5"/><path d="M22 20c0-2.5-2-4.5-5-5"/></svg>

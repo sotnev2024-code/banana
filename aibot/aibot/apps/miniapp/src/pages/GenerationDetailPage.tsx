@@ -269,10 +269,26 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
           <span className="viewer-action-label"></span>
         </button>
 
-        {/* Try prompt */}
+        {/* Try prompt / Variation */}
         <button className="viewer-action-btn" onClick={onTryPrompt}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
             <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+          </svg>
+        </button>
+
+        {/* Share */}
+        <button className="viewer-action-btn" onClick={() => {
+          const shareUrl = `https://t.me/${import.meta.env.VITE_BOT_USERNAME}/app?startapp=gen_${item.id}`
+          try {
+            window.Telegram?.WebApp?.openTelegramLink(
+              `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(item.prompt.slice(0, 100))}`
+            )
+          } catch {
+            navigator.clipboard.writeText(shareUrl).then(() => toast('Link copied'))
+          }
+        }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8}>
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
           </svg>
         </button>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPublicProfile, getUserGenerations, sendDonate, type PublicProfile, type Generation } from '../api/client'
+import { getPublicProfile, getUserGenerations, sendDonate, toggleFollow, type PublicProfile, type Generation } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { t, getLang } from '../i18n'
 import { toast } from '../components/ui/Toast'
@@ -16,11 +16,17 @@ export default function UserProfilePage() {
   const [donateAmount, setDonateAmount] = useState('')
   const [donateMsg, setDonateMsg] = useState('')
   const [sending, setSending] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followersCount, setFollowersCount] = useState(0)
   const cursorRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!id) return
-    getPublicProfile(id).then(setProfile).catch(() => {})
+    getPublicProfile(id).then(p => {
+      setProfile(p)
+      setIsFollowing(p.isFollowing)
+      setFollowersCount(p.followersCount)
+    }).catch(() => {})
     getUserGenerations(id).then(d => {
       setItems(d.items)
       cursorRef.current = d.nextCursor
@@ -89,6 +95,10 @@ export default function UserProfilePage() {
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{profile.totalLikes}</div>
                 <div style={{ fontSize: 11, color: 'var(--text2)' }}>{getLang() === 'en' ? 'likes' : 'лайков'}</div>
               </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{followersCount}</div>
+                <div style={{ fontSize: 11, color: 'var(--text2)' }}>{getLang() === 'en' ? 'followers' : 'подписчиков'}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -102,15 +112,25 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Donate button */}
-        {!isMe && profile.canReceiveDonations && (
-          <button className="btn-primary" onClick={() => setShowDonate(true)}>
-            {getLang() === 'en' ? `Donate tokens (min ${profile.minDonate})` : `Донат токенов (мин ${profile.minDonate})`}
-          </button>
-        )}
-        {!isMe && !profile.canReceiveDonations && (
-          <div style={{ padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>
-            {getLang() === 'en' ? 'This user cannot receive donations yet' : 'Этот пользователь пока не может получать донаты'}
+        {/* Follow + Donate */}
+        {!isMe && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={async () => {
+              const res = await toggleFollow(profile.id).catch(() => null)
+              if (res) {
+                setIsFollowing(res.following)
+                setFollowersCount(prev => res.following ? prev + 1 : prev - 1)
+              }
+            }} className={isFollowing ? 'btn-outline' : 'btn-primary'} style={{ flex: 1 }}>
+              {isFollowing
+                ? (getLang() === 'en' ? 'Following' : 'Подписка')
+                : (getLang() === 'en' ? 'Follow' : 'Подписаться')}
+            </button>
+            {profile.canReceiveDonations && (
+              <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowDonate(true)}>
+                {getLang() === 'en' ? 'Donate' : 'Донат'}
+              </button>
+            )}
           </div>
         )}
 

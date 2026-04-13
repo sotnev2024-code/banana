@@ -175,11 +175,22 @@ export default function CreatePage() {
     setImageUrl(URL.createObjectURL(file))
   }
 
+  // Prompt history
+  const [showHistory, setShowHistory] = useState(false)
+  const promptHistory: string[] = JSON.parse(localStorage.getItem('promptHistory') ?? '[]')
+
+  const saveToHistory = (p: string) => {
+    const history = JSON.parse(localStorage.getItem('promptHistory') ?? '[]') as string[]
+    const filtered = history.filter(h => h !== p)
+    filtered.unshift(p)
+    localStorage.setItem('promptHistory', JSON.stringify(filtered.slice(0, 20)))
+  }
+
   const handleGenerate = async () => {
     if (!selectedModel || !prompt.trim()) return
+    saveToHistory(prompt.trim())
     setGenState('loading'); setError('')
     try {
-      // Upload reference image if selected
       let uploadedUrl: string | undefined
       if (imageFile) {
         uploadedUrl = await uploadFile(imageFile)
@@ -279,8 +290,28 @@ export default function CreatePage() {
           </>
         )}
 
-        <textarea className="prompt-area" placeholder={t('create.promptPlaceholder')}
-          value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} />
+        <div style={{ position: 'relative' }}>
+          <textarea className="prompt-area" placeholder={t('create.promptPlaceholder')}
+            value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} />
+          {promptHistory.length > 0 && (
+            <button onClick={() => setShowHistory(!showHistory)}
+              style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 6, background: 'var(--surface)', border: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" strokeWidth={2} strokeLinecap="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+              </svg>
+            </button>
+          )}
+          {showHistory && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 10, maxHeight: 160, overflowY: 'auto', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
+              {promptHistory.map((p, i) => (
+                <div key={i} onClick={() => { setPrompt(p); setShowHistory(false) }}
+                  style={{ padding: '10px 12px', fontSize: 13, borderBottom: i < promptHistory.length - 1 ? '0.5px solid var(--border)' : undefined, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Publish toggle */}
         <div className="setting-toggle-row" onClick={() => setIsPublic(!isPublic)}

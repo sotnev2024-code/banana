@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../index'
+import { notify } from '../notifications'
 
 export async function feedRoutes(app: FastifyInstance) {
   // GET /feed?cursor=xxx&type=IMAGE&limit=20
@@ -117,7 +118,12 @@ export async function feedRoutes(app: FastifyInstance) {
         prisma.like.create({ data: { userId, generationId: id } }),
         prisma.generation.update({ where: { id }, data: { likesCount: { increment: 1 } } }),
       ])
-      const gen = await prisma.generation.findUnique({ where: { id }, select: { likesCount: true } })
+      // Notify author
+      const gen = await prisma.generation.findUnique({ where: { id }, select: { likesCount: true, userId: true } })
+      if (gen && gen.userId !== userId) {
+        const liker = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } })
+        notify(gen.userId, 'like', `${liker?.firstName} liked your work`, id)
+      }
       return reply.send({ liked: true, likesCount: gen?.likesCount ?? 0 })
     }
   })
@@ -218,6 +224,22 @@ export async function feedRoutes(app: FastifyInstance) {
       data: { userId, generationId: id, text: text.trim(), parentId: parentId ?? null },
       include: { user: { select: { firstName: true, username: true, photoUrl: true } } },
     })
+
+    // Notify
+    const commenter = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } })
+    if (parentId) {
+      // Reply notification to parent comment author
+      const parent = await prisma.comment.findUnique({ where: { id: parentId }, select: { userId: true } })
+      if (parent && parent.userId !== userId) {
+        notify(parent.userId, 'reply', `${commenter?.firstName} replied to your comment`, id)
+      }
+    } else {
+      // Comment notification to generation author
+      const gen = await prisma.generation.findUnique({ where: { id }, select: { userId: true } })
+      if (gen && gen.userId !== userId) {
+        notify(gen.userId, 'comment', `${commenter?.firstName} commented on your work`, id)
+      }
+    }
 
     return reply.send({ ...comment, isLiked: false, isOwn: true, replies: [] })
   })

@@ -124,6 +124,16 @@ export const addFavorite = (generationId: string) =>
 export const removeFavorite = (generationId: string) =>
   req<{ ok: boolean }>('DELETE', `/me/favorites/${generationId}`)
 
+// Notifications
+export const getNotifications = () =>
+  req<{ items: NotificationItem[]; unreadCount: number }>('GET', '/me/notifications')
+export const markNotificationsRead = () =>
+  req<{ ok: boolean }>('POST', '/me/notifications/read', {})
+
+// Follow
+export const toggleFollow = (userId: string) =>
+  req<{ following: boolean }>('POST', `/me/follow/${userId}`, {})
+
 // Promo codes
 export const redeemPromo = (code: string) =>
   req<{ tokens: number; message: string }>('POST', '/me/promo', { code })
@@ -237,9 +247,20 @@ export interface PublicProfile {
   photoUrl?: string
   minDonate: number
   canReceiveDonations: boolean
+  isFollowing: boolean
+  followersCount: number
   createdAt: string
   generationsCount: number
   totalLikes: number
+}
+
+export interface NotificationItem {
+  id: string
+  type: string
+  text: string
+  refId?: string
+  isRead: boolean
+  createdAt: string
 }
 
 export interface UserStats {

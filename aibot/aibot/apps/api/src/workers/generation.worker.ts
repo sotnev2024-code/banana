@@ -102,6 +102,29 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         if (genData) await checkAchievements(genData.userId)
       } catch {}
 
+      // Auto-post to channel if public
+      if (process.env.TG_CHANNEL_ID) {
+        try {
+          const genForChannel = await prisma.generation.findUnique({ where: { id: generationId }, select: { isPublic: true, type: true, model: true } })
+          if (genForChannel?.isPublic) {
+            const BOT_TOKEN = process.env.BOT_TOKEN
+            const channelId = process.env.TG_CHANNEL_ID
+            const caption = `${genForChannel.model.replace(/-/g, ' ')}\n\npicpulse.fun`
+            if (genForChannel.type === 'IMAGE') {
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: channelId, photo: localUrl, caption }),
+              })
+            } else if (genForChannel.type === 'VIDEO' || genForChannel.type === 'MOTION') {
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: channelId, video: localUrl, caption }),
+              })
+            }
+          }
+        } catch {}
+      }
+
       // Send result to user via Telegram
       try {
         const gen = await prisma.generation.findUnique({

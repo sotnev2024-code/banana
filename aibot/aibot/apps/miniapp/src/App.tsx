@@ -19,6 +19,7 @@ import { ToastProvider } from './components/ui/Toast'
 import GenerationDetailPage from './pages/GenerationDetailPage'
 import AdminPage from './pages/admin/AdminPage'
 import UserProfilePage from './pages/UserProfilePage'
+import NotificationsPage from './pages/NotificationsPage'
 
 function AppContent() {
   useBackButton()
@@ -43,6 +44,7 @@ function AppContent() {
             <Route path="/generation/:id" element={<GenerationDetailPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/user/:id" element={<UserProfilePage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
           </Routes>
         </div>
         <BottomNav />

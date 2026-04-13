@@ -22,6 +22,20 @@ export async function usersRoutes(app: FastifyInstance) {
       _sum: { likesCount: true },
     })
 
+    // Check follow status
+    let isFollowing = false
+    let followersCount = 0
+    try {
+      followersCount = await prisma.follow.count({ where: { followingId: id } })
+      const decoded = await (req as any).jwtVerify().catch(() => null)
+      if (decoded?.userId) {
+        const f = await prisma.follow.findUnique({
+          where: { followerId_followingId: { followerId: decoded.userId, followingId: id } },
+        })
+        isFollowing = !!f
+      }
+    } catch {}
+
     return reply.send({
       id: user.id,
       firstName: user.firstName,
@@ -29,6 +43,8 @@ export async function usersRoutes(app: FastifyInstance) {
       photoUrl: user.photoUrl,
       minDonate: user.minDonate,
       canReceiveDonations: user._count.payments > 0,
+      isFollowing,
+      followersCount,
       createdAt: user.createdAt.toISOString(),
       generationsCount: user._count.generations,
       totalLikes: likesResult._sum.likesCount ?? 0,
