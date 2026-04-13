@@ -75,18 +75,6 @@ export async function startHandler(ctx: Context) {
     welcomeText,
     Markup.inlineKeyboard([
       [Markup.button.webApp('Open Studio', miniAppUrl)],
-      [
-        Markup.button.callback('Photo',  'cat:image'),
-        Markup.button.callback('Video', 'cat:video'),
-      ],
-      [
-        Markup.button.callback('Music',  'cat:music'),
-        Markup.button.callback('Motion',  'cat:motion'),
-      ],
-      [
-        Markup.button.callback('Buy tokens', 'cat:buy'),
-        Markup.button.callback('Profile', 'cat:profile'),
-      ],
     ]),
   )
 }
