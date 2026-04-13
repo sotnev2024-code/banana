@@ -162,7 +162,8 @@ async function generateVeo(
   }
 
   if (settings.aspect_ratio) body.aspect_ratio = String(settings.aspect_ratio)
-  if (imageUrl) {
+  // Only veo3_fast supports image reference
+  if (imageUrl && kieModel === 'veo3_fast') {
     body.imageUrls = [imageUrl]
     body.generationType = 'REFERENCE_2_VIDEO'
   }
