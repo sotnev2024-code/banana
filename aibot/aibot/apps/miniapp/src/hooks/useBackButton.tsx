@@ -27,9 +27,10 @@ export function useBackButton() {
             navigate('/feed')
           } else if (location.pathname === '/admin') {
             navigate('/profile')
-          } else {
-            // All sub-pages: go back in history (preserves scroll & context)
+          } else if (window.history.length > 1) {
             navigate(-1)
+          } else {
+            navigate('/feed')
           }
         } catch {
           navigate(-1)
