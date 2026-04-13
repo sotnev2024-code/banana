@@ -81,8 +81,28 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const loaderRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const pullStartY = useRef(0)
+  const [pullDistance, setPullDistance] = useState(0)
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true)
+    setItems([])
+    setCursor(null)
+    setHasMore(true)
+    try {
+      const data = await getFeed(filter)
+      setItems(data.items)
+      setCursor(data.nextCursor)
+      setHasMore(!!data.nextCursor)
+    } finally {
+      setRefreshing(false)
+      setPullDistance(0)
+    }
+  }, [filter])
 
   const load = useCallback(async (reset = false) => {
     if (loading) return
@@ -117,17 +137,38 @@ export default function FeedPage() {
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
     touchStartY.current = e.touches[0].clientY
+    pullStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Pull-to-refresh: only when scrolled to top
+    const scrollTop = scrollRef.current?.closest('.page')?.scrollTop ?? 0
+    if (scrollTop <= 0 && !refreshing) {
+      const dy = e.touches[0].clientY - pullStartY.current
+      if (dy > 0) {
+        setPullDistance(Math.min(dy * 0.4, 80))
+      }
+    }
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
+
+    // Category swipe
     if (Math.abs(dx) > 60 && dy < 80) {
       if (dx < 0 && filterIndex < FILTERS.length - 1) {
         setFilterIndex(filterIndex + 1)
       } else if (dx > 0 && filterIndex > 0) {
         setFilterIndex(filterIndex - 1)
       }
+    }
+
+    // Pull-to-refresh trigger
+    if (pullDistance > 50) {
+      refresh()
+    } else {
+      setPullDistance(0)
     }
   }
 
@@ -138,13 +179,31 @@ export default function FeedPage() {
           <div className="topbar-title">{t('feed.title')}</div>
           <div className="topbar-sub">{t('feed.subtitle')}</div>
         </div>
-        {user && (
-          <div className="token-badge">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="5"/></svg>
-            {user.balance}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {user && (
+            <div className="token-badge">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="5"/></svg>
+              {user.balance}
+            </div>
+          )}
+          <button onClick={refresh} disabled={refreshing} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" strokeWidth={2} strokeLinecap="round"
+              style={refreshing ? { animation: 'spin 0.8s linear infinite' } : undefined}>
+              <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {/* Pull-to-refresh indicator */}
+      {pullDistance > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: `${pullDistance / 4}px 0`, transition: pullDistance > 50 ? 'none' : 'padding 0.2s' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth={2}
+            style={{ opacity: Math.min(pullDistance / 50, 1), transform: `rotate(${pullDistance * 4}deg)` }}>
+            <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
+          </svg>
+        </div>
+      )}
 
       <div className="filter-row">
         {FILTERS.map((f, i) => (
@@ -155,7 +214,7 @@ export default function FeedPage() {
         ))}
       </div>
 
-      <div className="feed-grid" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div ref={scrollRef} className="feed-grid" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         {items.map(item => (
           <FeedCard key={item.id} item={item}
             onClick={() => navigate(`/generation/${item.id}`)} />

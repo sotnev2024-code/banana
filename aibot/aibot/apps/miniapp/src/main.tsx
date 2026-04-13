@@ -18,6 +18,13 @@ try {
       }
     } catch {}
 
+    // Disable swipe-down to close
+    try {
+      if (typeof (tg as any).disableVerticalSwipes === 'function') {
+        (tg as any).disableVerticalSwipes()
+      }
+    } catch {}
+
     // Adapt colors to theme
     try {
       const isDark = tg.colorScheme === 'dark'
