@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
+import { useBackButton } from './hooks/useBackButton'
 import { BottomNav } from './components/ui/BottomNav'
 import FeedPage from './pages/FeedPage'
 import CreatePage from './pages/CreatePage'
@@ -17,10 +18,10 @@ import { ToastProvider } from './components/ui/Toast'
 import GenerationDetailPage from './pages/GenerationDetailPage'
 import AdminPage from './pages/admin/AdminPage'
 
-export default function App() {
+function AppContent() {
+  useBackButton()
   return (
-    <AuthProvider>
-      <div className="layout">
+    <div className="layout">
         <div className="page">
           <Routes>
             <Route path="/" element={<Navigate to="/feed" replace />} />
@@ -43,6 +44,13 @@ export default function App() {
         <BottomNav />
         <ToastProvider />
       </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   )
 }

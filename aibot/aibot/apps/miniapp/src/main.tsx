@@ -9,8 +9,16 @@ const tg = window.Telegram?.WebApp
 if (tg) {
   tg.ready()
   tg.expand()
-  tg.setHeaderColor('#ffffff')
-  tg.setBackgroundColor('#f5f5f0')
+
+  // Request fullscreen on mobile
+  if (typeof (tg as any).requestFullscreen === 'function') {
+    try { (tg as any).requestFullscreen() } catch {}
+  }
+
+  // Adapt colors to theme
+  const isDark = tg.colorScheme === 'dark'
+  tg.setHeaderColor(isDark ? '#1a1a1e' : '#ffffff')
+  tg.setBackgroundColor(isDark ? '#1a1a1e' : '#f5f5f0')
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
