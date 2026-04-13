@@ -3,7 +3,7 @@ import type { SceneContext } from 'telegraf/scenes'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { PrismaClient } from '@prisma/client'
 import { Redis } from 'ioredis'
-import { startHandler } from './handlers/start'
+import { startHandler, langSelectHandler } from './handlers/start'
 import { generateScene } from './scenes/generate'
 import { buyHandler, profileHandler, historyHandler } from './handlers/buy'
 import { subscribeToResults } from './handlers/results'
@@ -28,13 +28,8 @@ bot.command('buy', buyHandler)
 bot.command('balance', profileHandler)
 bot.command('history', historyHandler)
 
-// Category buttons from main menu
-bot.action('cat:image',  (ctx) => (ctx as any).scene.enter('generate', { type: 'IMAGE' }))
-bot.action('cat:video',  (ctx) => (ctx as any).scene.enter('generate', { type: 'VIDEO' }))
-bot.action('cat:music',  (ctx) => (ctx as any).scene.enter('generate', { type: 'MUSIC' }))
-bot.action('cat:motion', (ctx) => (ctx as any).scene.enter('generate', { type: 'MOTION' }))
-bot.action('cat:buy',    buyHandler)
-bot.action('cat:profile', profileHandler)
+// Language selection for new users
+bot.action(/^lang:/, langSelectHandler)
 
 // Subscribe to completed generations via Redis pub/sub
 subscribeToResults(bot, redis)
