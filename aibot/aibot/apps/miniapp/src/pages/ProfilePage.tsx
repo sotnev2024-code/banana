@@ -129,6 +129,9 @@ export default function ProfilePage() {
           <MenuItem icon={<IconList />} label={t('profile.transactions')} onClick={() => navigate('/transactions')} />
           <MenuItem icon={<IconTicket />} label={t('profile.promoCode')} onClick={() => navigate('/promo')} />
           <MenuItem icon={<IconGear />} label={t('profile.settings')} onClick={() => navigate('/settings')} last={!isAdmin} />
+          <MenuItem icon={<IconCode />} label={getLang() === 'en' ? 'Order bot development' : 'Заказать разработку бота'} onClick={() => {
+            try { window.Telegram?.WebApp?.openTelegramLink('https://t.me/mnogoprofilnyi') } catch { window.open('https://t.me/mnogoprofilnyi') }
+          }} last={!isAdmin} />
           {isAdmin && <MenuItem icon={<IconShield />} label="Admin Panel" onClick={() => navigate('/admin')} last />}
         </div>
       </div>
@@ -173,4 +176,5 @@ const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="no
 const IconList = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M3 6h18M3 12h14M3 18h10"/></svg>
 const IconTicket = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M2 9V6a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H4a2 2 0 01-2-2v-3a2 2 0 000-4z"/></svg>
 const IconGear = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+const IconCode = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
 const IconShield = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
