@@ -102,6 +102,34 @@ async function generateTask(
   if (settings.nsfw_checker !== undefined) input.nsfw_checker = false
   if (settings.web_search !== undefined) input.web_search = settings.web_search === true || settings.web_search === 'true'
 
+  // ── Model-specific required fields ──
+
+  // Kling 3.0: multi_shots (boolean) and multi_prompt (array) are REQUIRED
+  if (kieModel === 'kling-3.0/video') {
+    input.multi_shots = false
+    input.multi_prompt = []
+  }
+
+  // Kling 2.6 I2V: sound is REQUIRED boolean, duration must be string "5" or "10"
+  if (kieModel === 'kling-2.6/image-to-video') {
+    input.sound = input.sound ?? false
+    if (input.duration !== undefined) input.duration = String(input.duration)
+    else input.duration = '5'
+  }
+
+  // Seedance 2.0: web_search is REQUIRED boolean
+  if (kieModel === 'bytedance/seedance-2') {
+    input.web_search = input.web_search ?? false
+  }
+
+  // Grok I2V: spicy mode unavailable with external images — fallback to normal
+  if (kieModel === 'grok-imagine/image-to-video') {
+    const hasImages = (settings._imageUrls as unknown as string[] | undefined)?.length ?? (imageUrl ? 1 : 0)
+    if (hasImages > 0 && String(input.mode) === 'spicy') {
+      input.mode = 'normal'
+    }
+  }
+
   // File inputs (skip blob: URLs)
   const imageUrls = (settings._imageUrls as unknown as string[] | undefined) ?? (imageUrl && !imageUrl.startsWith('blob:') ? [imageUrl] : [])
   const validUrls = imageUrls.filter(u => !u.startsWith('blob:'))
@@ -183,6 +211,7 @@ async function generateSuno(
   settings: Record<string, string | number | boolean> = {},
   callBackUrl?: string,
 ): Promise<string> {
+  // customMode and instrumental are REQUIRED booleans
   const customMode = settings.customMode === true || settings.customMode === 'true'
   const instrumental = settings.instrumental === true || settings.instrumental === 'true'
 
@@ -198,7 +227,9 @@ async function generateSuno(
     if (settings.style) body.style = String(settings.style)
   }
 
+  // callBackUrl is required for Suno
   if (callBackUrl) body.callBackUrl = callBackUrl
+  else body.callBackUrl = ''
 
   const res = await post('/generate', body)
   if (res.code !== 200 || !res.data?.taskId) {
