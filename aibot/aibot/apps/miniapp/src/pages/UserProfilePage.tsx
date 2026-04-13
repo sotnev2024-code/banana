@@ -163,9 +163,14 @@ export default function UserProfilePage() {
             <div key={item.id} onClick={() => navigate(`/generation/${item.id}`)}
               style={{ aspectRatio: '1', overflow: 'hidden', cursor: 'pointer', background: 'var(--surface2)' }}>
               {item.resultUrl ? (
-                item.type === 'VIDEO' || item.type === 'MOTION'
-                  ? <video src={(item as any).thumbnailUrl ?? item.resultUrl} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <img src={(item as any).thumbnailUrl ?? item.resultUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <img src={(item as any).thumbnailUrl ?? item.resultUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {(item.type === 'VIDEO' || item.type === 'MOTION') && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" style={{ position: 'absolute', top: 4, right: 4, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}>
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  )}
+                </div>
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth={1.5}>
