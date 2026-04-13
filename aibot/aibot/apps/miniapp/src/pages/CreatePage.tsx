@@ -379,7 +379,8 @@ export default function CreatePage() {
 
         <div style={{ position: 'relative' }}>
           <textarea className="prompt-area" placeholder={t('create.promptPlaceholder')}
-            value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} />
+            value={prompt} onChange={e => setPrompt(e.target.value)} rows={3}
+            onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
           {promptHistory.length > 0 && (
             <button onClick={() => setShowHistory(!showHistory)}
               style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 6, background: 'var(--surface)', border: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
