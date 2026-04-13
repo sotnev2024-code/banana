@@ -34,6 +34,11 @@ export interface ModelConfig {
   kieModel: string              // actual model string for kie.ai API
   kieEndpoint: string           // API endpoint path
   settings?: SettingOption[]    // configurable settings for this model
+  maxImages?: number            // max image uploads (0 = none)
+  maxVideos?: number            // max video uploads
+  maxAudios?: number            // max audio uploads
+  acceptsVideo?: boolean        // accepts video reference
+  acceptsAudio?: boolean        // accepts audio reference
 }
 
 export const MODELS: ModelConfig[] = [
@@ -45,6 +50,7 @@ export const MODELS: ModelConfig[] = [
     type: 'IMAGE',
     tokensPerGeneration: 18,
     supportsImageInput: true,
+    maxImages: 8,
     description: 'Google Imagen — быстро, до 4K, референсы',
     descriptionEn: 'Google Imagen — fast, up to 4K, references',
     maxPromptLength: 10000,
@@ -65,6 +71,7 @@ export const MODELS: ModelConfig[] = [
     type: 'IMAGE',
     tokensPerGeneration: 8,
     supportsImageInput: true,
+    maxImages: 14,
     description: 'Дешевая генерация, до 14 референсов, 4K',
     descriptionEn: 'Cheap generation, up to 14 references, 4K',
     maxPromptLength: 20000,
@@ -85,6 +92,7 @@ export const MODELS: ModelConfig[] = [
     type: 'IMAGE',
     tokensPerGeneration: 7,
     supportsImageInput: true,
+    maxImages: 14,
     description: 'ByteDance — редактирование изображений, 4K',
     descriptionEn: 'ByteDance — image editing, 4K',
     maxPromptLength: 3000,
@@ -141,6 +149,7 @@ export const MODELS: ModelConfig[] = [
     type: 'IMAGE',
     tokensPerGeneration: 4,
     supportsImageInput: true,
+    maxImages: 5,
     description: 'xAI — редактирование по референсу, 2 варианта',
     descriptionEn: 'xAI — reference editing, 2 variants',
     maxPromptLength: 5000,
@@ -252,6 +261,11 @@ export const MODELS: ModelConfig[] = [
     type: 'VIDEO',
     tokensPerGeneration: 90,
     supportsImageInput: true,
+    maxImages: 9,
+    maxVideos: 3,
+    maxAudios: 3,
+    acceptsVideo: true,
+    acceptsAudio: true,
     description: 'ByteDance — аудио, мульти-референсы, 4-15 сек',
     descriptionEn: 'ByteDance — audio, multi-references, 4-15 sec',
     maxDuration: 15,
@@ -298,6 +312,7 @@ export const MODELS: ModelConfig[] = [
     type: 'VIDEO',
     tokensPerGeneration: 20,
     supportsImageInput: true,
+    maxImages: 7,
     description: 'xAI — анимация фото, до 30 сек, дёшево',
     descriptionEn: 'xAI — photo animation, up to 30 sec, cheap',
     maxDuration: 30,
@@ -323,6 +338,9 @@ export const MODELS: ModelConfig[] = [
     type: 'MOTION',
     tokensPerGeneration: 120,
     supportsImageInput: true,
+    maxImages: 1,
+    maxVideos: 1,
+    acceptsVideo: true,
     description: 'Motion control v3, фото+видео-референс, 1080p',
     descriptionEn: 'Motion control v3, photo+video reference, 1080p',
     maxDuration: 30,
@@ -344,6 +362,9 @@ export const MODELS: ModelConfig[] = [
     type: 'MOTION',
     tokensPerGeneration: 40,
     supportsImageInput: true,
+    maxImages: 1,
+    maxVideos: 1,
+    acceptsVideo: true,
     description: 'Бюджетный motion control, на 60% дешевле',
     descriptionEn: 'Budget motion control, 60% cheaper',
     maxDuration: 30,
@@ -364,6 +385,9 @@ export const MODELS: ModelConfig[] = [
     type: 'MOTION',
     tokensPerGeneration: 80,
     supportsImageInput: true,
+    maxImages: 1,
+    maxAudios: 1,
+    acceptsAudio: true,
     description: 'Анимация аватара по аудио, до 15 сек',
     descriptionEn: 'Audio-driven avatar animation, up to 15 sec',
     maxDuration: 15,

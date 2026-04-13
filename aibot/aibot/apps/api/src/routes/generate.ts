@@ -10,10 +10,11 @@ export async function generateRoutes(app: FastifyInstance) {
   // POST /generate
   app.post('/', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
     const { userId } = req.user as { userId: string }
-    const { model: modelId, prompt, imageUrl, isPublic = true, settings = {} } = req.body as {
+    const { model: modelId, prompt, imageUrl, imageUrls, isPublic = true, settings = {} } = req.body as {
       model: string
       prompt: string
       imageUrl?: string
+      imageUrls?: string[]
       isPublic?: boolean
       settings?: Record<string, string | number | boolean>
     }
@@ -73,7 +74,12 @@ export async function generateRoutes(app: FastifyInstance) {
     })
 
     // Enqueue task
-    await generationQueue.add('generate', { generationId: generation.id, modelId, prompt, imageUrl, settings }, {
+    // Pass all image URLs to worker via settings
+    const workerSettings = { ...settings }
+    if (imageUrls && imageUrls.length > 0) {
+      (workerSettings as any)._imageUrls = imageUrls
+    }
+    await generationQueue.add('generate', { generationId: generation.id, modelId, prompt, imageUrl, settings: workerSettings }, {
       attempts: 1,
     })
 

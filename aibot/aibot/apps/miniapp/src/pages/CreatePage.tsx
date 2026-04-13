@@ -115,8 +115,7 @@ export default function CreatePage() {
   const [type, setType] = useState<string>('IMAGE')
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [prompt, setPrompt] = useState(state?.prompt ?? '')
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<{ file: File; preview: string; type: 'image' | 'video' | 'audio' }[]>([])
   const [modelSettings, setModelSettings] = useState<Record<string, string | number | boolean>>({})
   const [genState, setGenState] = useState<GenState>('idle')
   const [resultUrl, setResultUrl] = useState<string | null>(null)
@@ -168,11 +167,32 @@ export default function CreatePage() {
     return () => clearInterval(interval)
   }, [genState, genId])
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageFile(file)
-    setImageUrl(URL.createObjectURL(file))
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files ?? [])
+    const maxImg = model?.maxImages ?? 1
+    const maxVid = model?.maxVideos ?? 0
+    const maxAud = model?.maxAudios ?? 0
+
+    const additions = newFiles.map(file => {
+      const ft = file.type.startsWith('video/') ? 'video' as const
+        : file.type.startsWith('audio/') ? 'audio' as const
+        : 'image' as const
+      return { file, preview: URL.createObjectURL(file), type: ft }
+    })
+
+    setFiles(prev => {
+      const combined = [...prev, ...additions]
+      // Enforce limits
+      const images = combined.filter(f => f.type === 'image').slice(0, maxImg)
+      const videos = combined.filter(f => f.type === 'video').slice(0, maxVid || 0)
+      const audios = combined.filter(f => f.type === 'audio').slice(0, maxAud || 0)
+      return [...images, ...videos, ...audios]
+    })
+    e.target.value = '' // reset input
+  }
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   // Prompt history
@@ -191,11 +211,17 @@ export default function CreatePage() {
     saveToHistory(prompt.trim())
     setGenState('loading'); setError('')
     try {
-      let uploadedUrl: string | undefined
-      if (imageFile) {
-        uploadedUrl = await uploadFile(imageFile)
+      // Upload all files
+      const uploadedUrls: string[] = []
+      for (const f of files) {
+        const url = await uploadFile(f.file)
+        uploadedUrls.push(url)
       }
-      const gen = await createGeneration({ model: selectedModel, prompt, imageUrl: uploadedUrl, isPublic, settings: modelSettings })
+      const gen = await createGeneration({
+        model: selectedModel, prompt, isPublic, settings: modelSettings,
+        imageUrl: uploadedUrls[0],
+        imageUrls: uploadedUrls.length > 1 ? uploadedUrls : undefined,
+      })
       setGenId(gen.id); setGenState('polling')
     } catch (err: any) {
       setError(err.message ?? 'Error'); setGenState('error')
@@ -270,25 +296,61 @@ export default function CreatePage() {
           />
         )}
 
-        {model?.supportsImageInput && (
-          <>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <div className="upload-zone" onClick={() => fileRef.current?.click()}>
-              {imageUrl ? (
-                <img src={imageUrl} alt="ref" style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8 }} />
-              ) : (
-                <>
+        {model?.supportsImageInput && (() => {
+          const accept = [
+            'image/*',
+            model.acceptsVideo ? 'video/*' : '',
+            model.acceptsAudio ? 'audio/*' : '',
+          ].filter(Boolean).join(',')
+          const maxTotal = (model.maxImages ?? 1) + (model.maxVideos ?? 0) + (model.maxAudios ?? 0)
+          const canAddMore = files.length < maxTotal
+
+          return (
+            <>
+              <input ref={fileRef} type="file" accept={accept} multiple={maxTotal > 1} style={{ display: 'none' }} onChange={handleFileChange} />
+
+              {files.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {files.map((f, i) => (
+                    <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 8, overflow: 'hidden', background: 'var(--surface2)' }}>
+                      {f.type === 'image' && <img src={f.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      {f.type === 'video' && <video src={f.preview} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      {f.type === 'audio' && (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth={1.5}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/></svg>
+                        </div>
+                      )}
+                      <button onClick={() => removeFile(i)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round"><path d="M1 1l8 8M9 1l-8 8"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                  {canAddMore && (
+                    <div onClick={() => fileRef.current?.click()} style={{ width: 72, height: 72, borderRadius: 8, border: '1.5px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--text3)" strokeWidth={1.5} strokeLinecap="round"><path d="M10 4v12M4 10h12"/></svg>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {files.length === 0 && (
+                <div className="upload-zone" onClick={() => fileRef.current?.click()}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth={1.5} style={{ margin: '0 auto 6px' }}>
                     <path d="M12 16V4M8 8l4-4 4 4" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
                   </svg>
                   <div style={{ fontSize: 13, color: 'var(--text2)' }}>{t('create.uploadRef')}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{t('create.uploadOptional')}</div>
-                </>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                    {t('create.uploadOptional')}
+                    {maxTotal > 1 && ` (max ${maxTotal})`}
+                    {model.acceptsVideo && ' + video'}
+                    {model.acceptsAudio && ' + audio'}
+                  </div>
+                </div>
               )}
-            </div>
-          </>
-        )}
+            </>
+          )
+        })()}
 
         <div style={{ position: 'relative' }}>
           <textarea className="prompt-area" placeholder={t('create.promptPlaceholder')}

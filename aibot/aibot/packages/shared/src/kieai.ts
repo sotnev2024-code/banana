@@ -102,19 +102,36 @@ async function generateTask(
   if (settings.nsfw_checker !== undefined) input.nsfw_checker = false
   if (settings.web_search !== undefined) input.web_search = settings.web_search === true || settings.web_search === 'true'
 
-  // Image inputs (skip blob: URLs — they are local browser references)
-  if (imageUrl && !imageUrl.startsWith('blob:')) {
-    // Different models expect different field names
-    if (kieModel.includes('image-to-video') || kieModel.includes('seedance')) {
-      input.first_frame_url = imageUrl
+  // File inputs (skip blob: URLs)
+  const imageUrls = (settings._imageUrls as unknown as string[] | undefined) ?? (imageUrl && !imageUrl.startsWith('blob:') ? [imageUrl] : [])
+  const validUrls = imageUrls.filter(u => !u.startsWith('blob:'))
+
+  if (validUrls.length > 0) {
+    if (kieModel.includes('seedance')) {
+      // Seedance: separate image/video/audio references
+      const imgs = validUrls.filter(u => !u.match(/\.(mp4|mov|wav|mp3|ogg)$/i))
+      const vids = validUrls.filter(u => u.match(/\.(mp4|mov)$/i))
+      const auds = validUrls.filter(u => u.match(/\.(wav|mp3|ogg)$/i))
+      if (imgs.length > 0) input.first_frame_url = imgs[0]
+      if (imgs.length > 1) input.reference_image_urls = imgs.slice(1)
+      if (vids.length > 0) input.reference_video_urls = vids
+      if (auds.length > 0) input.reference_audio_urls = auds
+    } else if (kieModel.includes('image-to-video')) {
+      input.image_urls = validUrls.slice(0, 1)
     } else if (kieModel.includes('image-to-image')) {
-      input.image_urls = [imageUrl]
+      input.image_urls = validUrls
     } else if (kieModel.includes('motion-control')) {
-      input.input_urls = [imageUrl]
+      const imgs = validUrls.filter(u => !u.match(/\.(mp4|mov)$/i))
+      const vids = validUrls.filter(u => u.match(/\.(mp4|mov)$/i))
+      if (imgs.length > 0) input.input_urls = [imgs[0]]
+      if (vids.length > 0) input.video_urls = [vids[0]]
     } else if (kieModel.includes('avatar')) {
-      input.image_url = imageUrl
+      const imgs = validUrls.filter(u => !u.match(/\.(wav|mp3|ogg)$/i))
+      const auds = validUrls.filter(u => u.match(/\.(wav|mp3|ogg)$/i))
+      if (imgs.length > 0) input.image_url = imgs[0]
+      if (auds.length > 0) input.audio_url = auds[0]
     } else {
-      input.image_input = [imageUrl]
+      input.image_input = validUrls
     }
   }
 

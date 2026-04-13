@@ -9,7 +9,6 @@ export default function PlansPage() {
   const navigate = useNavigate()
   const [plans, setPlans] = useState<Plan[]>([])
   const [selected, setSelected] = useState<string>('pro')
-  const [payMethod, setPayMethod] = useState<'yukassa' | 'stars'>('yukassa')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => { getPlans().then(setPlans) }, [])
@@ -18,14 +17,8 @@ export default function PlansPage() {
     if (!selected) return
     setLoading(true)
     try {
-      if (payMethod === 'yukassa') {
-        const { confirmationUrl } = await createPayment(selected)
-        window.location.href = confirmationUrl
-      } else {
-        window.Telegram?.WebApp?.openTelegramLink(
-          `https://t.me/${import.meta.env.VITE_BOT_USERNAME}?start=buy_${selected}`
-        )
-      }
+      const { confirmationUrl } = await createPayment(selected)
+      window.location.href = confirmationUrl
     } catch (e: any) {
       alert(e.message)
     } finally {
@@ -66,26 +59,6 @@ export default function PlansPage() {
           )
         })}
 
-        <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10, fontWeight: 500 }}>{t('plans.payMethod')}</div>
-          {[
-            { id: 'yukassa', label: t('plans.card') },
-            { id: 'stars',   label: t('plans.stars') },
-          ].map(m => (
-            <div key={m.id} onClick={() => setPayMethod(m.id as any)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 14px', borderRadius: 12, marginBottom: 8,
-                background: 'var(--surface)', border: `${payMethod === m.id ? '2px solid var(--accent)' : '0.5px solid var(--border)'}`,
-                cursor: 'pointer',
-              }}>
-              <span style={{ fontSize: 14, flex: 1 }}>{m.label}</span>
-              <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${payMethod === m.id ? 'var(--accent)' : 'var(--border)'}`, background: payMethod === m.id ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {payMethod === m.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px 32px', background: 'var(--bg)' }}>

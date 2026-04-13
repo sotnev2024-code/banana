@@ -70,7 +70,7 @@ export async function uploadFile(file: File): Promise<string> {
 }
 
 // Generate
-export const createGeneration = (body: { model: string; prompt: string; imageUrl?: string; isPublic?: boolean; settings?: Record<string, string | number | boolean> }) =>
+export const createGeneration = (body: { model: string; prompt: string; imageUrl?: string; imageUrls?: string[]; isPublic?: boolean; settings?: Record<string, string | number | boolean> }) =>
   req<{ id: string; status: string }>('POST', '/generate', body)
 
 export const getGeneration = (id: string) =>
