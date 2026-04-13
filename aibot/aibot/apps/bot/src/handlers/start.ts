@@ -5,7 +5,17 @@ import { WELCOME_BONUS, REFERRAL_BONUS } from '@aibot/shared'
 
 const texts = {
   ru: {
-    welcome: (name: string, bonus: number) => `<b>${name}</b>, добро пожаловать в PicPulse AI Studio!\n\n+${bonus} токенов начислено.`,
+    welcome: (name: string, bonus: number) =>
+      `<b>${name}</b>, добро пожаловать в PicPulse AI Studio!\n\n` +
+      `+${bonus} токенов начислено.\n\n` +
+      `<b>Что умеет PicPulse:</b>\n` +
+      `  Генерация фото до 4K\n` +
+      `  Создание видео до 30 сек\n` +
+      `  AI музыка до 8 минут\n` +
+      `  Motion control и аватары\n` +
+      `  Лента с лайками и комментариями\n` +
+      `  Ежедневные бонусы и достижения\n\n` +
+      `20+ моделей: Nano Banana, Veo 3, Kling 3, Seedance, Grok, Suno`,
     welcomeBack: (name: string, balance: number) => `<b>${name}</b>, с возвращением!\n\nБаланс: <b>${balance} токенов</b>`,
     openStudio: 'Открыть студию',
     chooseLang: 'Выберите язык / Choose language',
@@ -13,7 +23,17 @@ const texts = {
     referralNotify: (name: string, bonus: number) => `+${bonus} токенов — ${name} присоединился по вашей ссылке!`,
   },
   en: {
-    welcome: (name: string, bonus: number) => `<b>${name}</b>, welcome to PicPulse AI Studio!\n\n+${bonus} tokens credited.`,
+    welcome: (name: string, bonus: number) =>
+      `<b>${name}</b>, welcome to PicPulse AI Studio!\n\n` +
+      `+${bonus} tokens credited.\n\n` +
+      `<b>What PicPulse can do:</b>\n` +
+      `  Photo generation up to 4K\n` +
+      `  Video creation up to 30 sec\n` +
+      `  AI music up to 8 min\n` +
+      `  Motion control & avatars\n` +
+      `  Social feed with likes & comments\n` +
+      `  Daily bonuses & achievements\n\n` +
+      `20+ models: Nano Banana, Veo 3, Kling 3, Seedance, Grok, Suno`,
     welcomeBack: (name: string, balance: number) => `<b>${name}</b>, welcome back!\n\nBalance: <b>${balance} tokens</b>`,
     openStudio: 'Open Studio',
     chooseLang: 'Choose language / Выберите язык',

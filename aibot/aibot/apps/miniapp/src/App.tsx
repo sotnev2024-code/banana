@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { useBackButton } from './hooks/useBackButton'
@@ -16,6 +17,7 @@ import FavoritesPage from './pages/FavoritesPage'
 import SettingsPage from './pages/SettingsPage'
 import PromoPage from './pages/PromoPage'
 import { ToastProvider } from './components/ui/Toast'
+import { Onboarding } from './components/ui/Onboarding'
 import GenerationDetailPage from './pages/GenerationDetailPage'
 import AdminPage from './pages/admin/AdminPage'
 import UserProfilePage from './pages/UserProfilePage'
@@ -24,6 +26,12 @@ import NotificationsPage from './pages/NotificationsPage'
 function AppContent() {
   useBackButton()
   const pageRef = useScrollRestore()
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_done'))
+
+  if (showOnboarding) {
+    return <Onboarding onComplete={() => setShowOnboarding(false)} />
+  }
+
   return (
     <div className="layout">
         <div className="page" ref={pageRef}>
