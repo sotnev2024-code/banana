@@ -93,6 +93,7 @@ export function sanitizeUser(user: any) {
     lang: user.lang ?? 'ru',
     theme: user.theme ?? 'auto',
     minDonate: user.minDonate ?? 1,
+    bio: user.bio ?? '',
     createdAt: user.createdAt?.toISOString(),
   }
 }

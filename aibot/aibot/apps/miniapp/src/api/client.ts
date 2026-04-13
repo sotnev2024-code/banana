@@ -33,7 +33,7 @@ export const getMyGenerations = (cursor?: string) =>
   req<PaginatedGenerations>('GET', `/me/generations${cursor ? `?cursor=${cursor}` : ''}`)
 export const getMyTransactions = () =>
   req<Transaction[]>('GET', '/me/transactions')
-export const updateSettings = (settings: { lang?: string; theme?: string; minDonate?: number }) =>
+export const updateSettings = (settings: { lang?: string; theme?: string; minDonate?: number; bio?: string }) =>
   req<UserFull>('PUT', '/me/settings', settings)
 
 // Public profiles
@@ -158,6 +158,7 @@ export interface UserFull {
   lang: string
   theme: string
   minDonate: number
+  bio: string
   createdAt: string
 }
 
@@ -246,6 +247,7 @@ export interface PublicProfile {
   username?: string
   photoUrl?: string
   minDonate: number
+  bio: string
   canReceiveDonations: boolean
   isFollowing: boolean
   followersCount: number

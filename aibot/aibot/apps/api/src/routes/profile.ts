@@ -52,11 +52,12 @@ export async function profileRoutes(app: FastifyInstance) {
   // PUT /me/settings — update user settings
   app.put('/settings', { onRequest: [(app as any).authenticate] }, async (req, reply) => {
     const { userId } = req.user as { userId: string }
-    const { lang, theme, minDonate } = req.body as { lang?: string; theme?: string; minDonate?: number }
+    const { lang, theme, minDonate, bio } = req.body as { lang?: string; theme?: string; minDonate?: number; bio?: string }
     const data: Record<string, any> = {}
     if (lang && ['ru', 'en'].includes(lang)) data.lang = lang
     if (theme && ['auto', 'light', 'dark'].includes(theme)) data.theme = theme
     if (minDonate !== undefined && minDonate >= 1 && minDonate <= 10000) data.minDonate = Math.floor(minDonate)
+    if (bio !== undefined) data.bio = bio.slice(0, 300)
 
     const user = await prisma.user.update({ where: { id: userId }, data })
     return reply.send(sanitizeUser(user))

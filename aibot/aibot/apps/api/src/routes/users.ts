@@ -10,7 +10,7 @@ export async function usersRoutes(app: FastifyInstance) {
       where: { id },
       select: {
         id: true, firstName: true, username: true, photoUrl: true,
-        minDonate: true, createdAt: true,
+        minDonate: true, bio: true, createdAt: true,
         _count: { select: { generations: { where: { status: 'DONE', isPublic: true } }, payments: { where: { status: 'SUCCEEDED' } } } },
       },
     })
@@ -42,6 +42,7 @@ export async function usersRoutes(app: FastifyInstance) {
       username: user.username,
       photoUrl: user.photoUrl,
       minDonate: user.minDonate,
+      bio: user.bio ?? '',
       canReceiveDonations: user._count.payments > 0,
       isFollowing,
       followersCount,

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPublicProfile, getUserGenerations, sendDonate, toggleFollow, type PublicProfile, type Generation } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
-import { t, getLang } from '../i18n'
+import { getLang } from '../i18n'
 import { toast } from '../components/ui/Toast'
 
 export default function UserProfilePage() {
@@ -51,15 +51,14 @@ export default function UserProfilePage() {
   }
 
   const isMe = me?.id === id
+  const lang = getLang()
 
   if (loading) {
     return (
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="skeleton" style={{ height: 80, borderRadius: 12 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <div className="skeleton" style={{ height: 100 }} />
-          <div className="skeleton" style={{ height: 100 }} />
-          <div className="skeleton" style={{ height: 100 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton" style={{ aspectRatio: '1' }} />)}
         </div>
       </div>
     )
@@ -75,60 +74,50 @@ export default function UserProfilePage() {
         <button className="back-btn" onClick={() => navigate(-1)}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M11 4L6 9l5 5"/></svg>
         </button>
-        <div className="topbar-title">{profile.firstName}</div>
+        <div className="topbar-title">{profile.username ? `@${profile.username}` : profile.firstName}</div>
       </div>
 
-      <div style={{ padding: '16px 16px 100px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Profile header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ padding: '16px 16px 100px' }}>
+        {/* Header row: avatar + stats */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 14 }}>
           {profile.photoUrl
-            ? <img src={profile.photoUrl} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }} />
-            : <div className="avatar-placeholder" style={{ width: 72, height: 72, fontSize: 28 }}>{profile.firstName[0]}</div>
+            ? <img src={profile.photoUrl} alt="" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            : <div className="avatar-placeholder" style={{ width: 80, height: 80, fontSize: 30 }}>{profile.firstName[0]}</div>
           }
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', gap: 20, textAlign: 'center' }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{profile.generationsCount}</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)' }}>{getLang() === 'en' ? 'works' : 'работ'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{profile.totalLikes}</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)' }}>{getLang() === 'en' ? 'likes' : 'лайков'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{followersCount}</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)' }}>{getLang() === 'en' ? 'followers' : 'подписчиков'}</div>
-              </div>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{profile.generationsCount}</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)' }}>{lang === 'en' ? 'works' : 'работ'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{profile.totalLikes}</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)' }}>{lang === 'en' ? 'likes' : 'лайков'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{followersCount}</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)' }}>{lang === 'en' ? 'followers' : 'подписчиков'}</div>
             </div>
           </div>
         </div>
 
-        {/* Name & username */}
-        <div>
+        {/* Name + bio */}
+        <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>{profile.firstName}</div>
-          {profile.username && <div style={{ fontSize: 13, color: 'var(--text2)' }}>@{profile.username}</div>}
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
-            {t('profile.since', { date: new Date(profile.createdAt).toLocaleDateString(getLang() === 'en' ? 'en' : 'ru', { month: 'long', year: 'numeric' }) })}
-          </div>
+          {profile.bio && <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 4, lineHeight: 1.4 }}>{profile.bio}</div>}
         </div>
 
-        {/* Follow + Donate */}
+        {/* Action buttons */}
         {!isMe && (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
             <button onClick={async () => {
               const res = await toggleFollow(profile.id).catch(() => null)
-              if (res) {
-                setIsFollowing(res.following)
-                setFollowersCount(prev => res.following ? prev + 1 : prev - 1)
-              }
-            }} className={isFollowing ? 'btn-outline' : 'btn-primary'} style={{ flex: 1 }}>
-              {isFollowing
-                ? (getLang() === 'en' ? 'Following' : 'Подписка')
-                : (getLang() === 'en' ? 'Follow' : 'Подписаться')}
+              if (res) { setIsFollowing(res.following); setFollowersCount(prev => res.following ? prev + 1 : prev - 1) }
+            }} className={isFollowing ? 'btn-outline' : 'btn-primary'} style={{ flex: 1, padding: '8px 0', fontSize: 13 }}>
+              {isFollowing ? (lang === 'en' ? 'Following' : 'Подписка') : (lang === 'en' ? 'Follow' : 'Подписаться')}
             </button>
             {profile.canReceiveDonations && (
-              <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowDonate(true)}>
-                {getLang() === 'en' ? 'Donate' : 'Донат'}
+              <button className="btn-outline" style={{ flex: 1, padding: '8px 0', fontSize: 13 }} onClick={() => setShowDonate(!showDonate)}>
+                {lang === 'en' ? 'Donate' : 'Донат'}
               </button>
             )}
           </div>
@@ -136,41 +125,39 @@ export default function UserProfilePage() {
 
         {/* Donate panel */}
         {showDonate && (
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <div className="card" style={{ padding: 14, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
               {[5, 10, 25, 50, 100].map(amt => (
                 <button key={amt} onClick={() => setDonateAmount(String(amt))}
-                  className={`setting-chip ${donateAmount === String(amt) ? 'active' : ''}`}>
-                  {amt}
-                </button>
+                  className={`setting-chip ${donateAmount === String(amt) ? 'active' : ''}`}>{amt}</button>
               ))}
             </div>
             <input type="number" value={donateAmount} onChange={e => setDonateAmount(e.target.value)}
-              placeholder={getLang() === 'en' ? `Amount (min ${profile.minDonate})` : `Сумма (мин ${profile.minDonate})`}
+              placeholder={lang === 'en' ? `Amount (min ${profile.minDonate})` : `Сумма (мин ${profile.minDonate})`}
               className="setting-text-input" style={{ marginBottom: 4 }} />
             {donateAmount && Number(donateAmount) > 0 && (
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8, paddingLeft: 2 }}>
-                {getLang() === 'en'
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>
+                {lang === 'en'
                   ? `${profile.firstName} receives ${Math.floor(Number(donateAmount) * 0.9)} tokens (10% fee)`
                   : `${profile.firstName} получит ${Math.floor(Number(donateAmount) * 0.9)} токенов (комиссия 10%)`}
               </div>
             )}
             <input type="text" value={donateMsg} onChange={e => setDonateMsg(e.target.value)}
-              placeholder={getLang() === 'en' ? 'Message (optional)' : 'Сообщение (необязательно)'}
-              className="setting-text-input" style={{ marginBottom: 10 }} />
+              placeholder={lang === 'en' ? 'Message (optional)' : 'Сообщение (необязательно)'}
+              className="setting-text-input" style={{ marginBottom: 8 }} />
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowDonate(false)}>
-                {getLang() === 'en' ? 'Cancel' : 'Отмена'}
+                {lang === 'en' ? 'Cancel' : 'Отмена'}
               </button>
               <button className="btn-primary" style={{ flex: 1 }} onClick={handleDonate}
                 disabled={!donateAmount || Number(donateAmount) < profile.minDonate || sending}>
-                {sending ? '...' : getLang() === 'en' ? 'Send' : 'Отправить'}
+                {sending ? '...' : lang === 'en' ? 'Send' : 'Отправить'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Generations grid */}
+        {/* Generation grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
           {items.map(item => (
             <div key={item.id} onClick={() => navigate(`/generation/${item.id}`)}
@@ -192,7 +179,7 @@ export default function UserProfilePage() {
 
         {items.length === 0 && !loading && (
           <div style={{ padding: 30, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-            {getLang() === 'en' ? 'No public works yet' : 'Пока нет публичных работ'}
+            {lang === 'en' ? 'No public works yet' : 'Пока нет публичных работ'}
           </div>
         )}
       </div>

@@ -20,6 +20,7 @@ model User {
   lang         String        @default("ru")
   theme        String        @default("auto")
   minDonate    Int           @default(1)
+  bio          String        @default("")
   referralCode String        @unique @default(cuid())
   referrerId   String?
   referrer     User?         @relation("Referrals", fields: [referrerId], references: [id])

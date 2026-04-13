@@ -10,12 +10,13 @@ export default function SettingsPage() {
   const [lang, setLang] = useState(user?.lang ?? 'ru')
   const [theme, setTheme] = useState(user?.theme ?? 'auto')
   const [minDonate, setMinDonate] = useState(String(user?.minDonate ?? 1))
+  const [bio, setBio] = useState(user?.bio ?? '')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateSettings({ lang, theme, minDonate: Number(minDonate) || 1 })
+      await updateSettings({ lang, theme, minDonate: Number(minDonate) || 1, bio })
       await refresh()
       navigate(-1)
     } catch (e: any) {
@@ -65,6 +66,21 @@ export default function SettingsPage() {
                 <RadioDot selected={theme === item.id} />
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Bio */}
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 10 }}>
+            {getLang() === 'en' ? 'About me' : 'О себе'}
+          </div>
+          <div className="card" style={{ padding: 14 }}>
+            <textarea value={bio} onChange={e => setBio(e.target.value.slice(0, 300))}
+              placeholder={getLang() === 'en' ? 'Write about yourself...' : 'Расскажите о себе...'}
+              className="prompt-area" rows={3} />
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, textAlign: 'right' }}>
+              {bio.length}/300
+            </div>
           </div>
         </div>
 
