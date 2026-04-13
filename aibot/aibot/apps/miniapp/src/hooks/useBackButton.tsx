@@ -8,50 +8,39 @@ export function useBackButton() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp
-    if (!tg?.BackButton) return
+    try {
+      const tg = window.Telegram?.WebApp
+      if (!tg?.BackButton) return
 
-    const isFeed = location.pathname === '/feed' || location.pathname === '/'
-    const isMainTab = MAIN_TABS.includes(location.pathname)
+      const isFeed = location.pathname === '/feed' || location.pathname === '/'
+      const isMainTab = MAIN_TABS.includes(location.pathname)
 
-    if (isFeed) {
-      // On feed — back button asks to close app
       tg.BackButton.show()
 
       const handler = () => {
-        tg.showConfirm('Close the app?', (confirmed: boolean) => {
-          if (confirmed) tg.close()
-        })
+        try {
+          if (isFeed) {
+            tg.showConfirm('Close the app?', (confirmed: boolean) => {
+              if (confirmed) tg.close()
+            })
+          } else if (isMainTab) {
+            navigate('/feed')
+          } else if (location.pathname.startsWith('/generation/')) {
+            navigate('/feed')
+          } else if (location.pathname === '/admin') {
+            navigate('/profile')
+          } else {
+            navigate(-1)
+          }
+        } catch {
+          navigate(-1)
+        }
       }
 
       tg.BackButton.onClick(handler)
-      return () => { tg.BackButton.offClick(handler) }
-    }
-
-    if (isMainTab) {
-      // On other main tabs — back goes to feed
-      tg.BackButton.show()
-
-      const handler = () => { navigate('/feed') }
-
-      tg.BackButton.onClick(handler)
-      return () => { tg.BackButton.offClick(handler) }
-    }
-
-    // Sub-pages — back navigates up
-    tg.BackButton.show()
-
-    const handler = () => {
-      if (location.pathname.startsWith('/generation/')) {
-        navigate('/feed')
-      } else if (location.pathname === '/admin') {
-        navigate('/profile')
-      } else {
-        navigate(-1)
+      return () => {
+        try { tg.BackButton.offClick(handler) } catch {}
       }
-    }
-
-    tg.BackButton.onClick(handler)
-    return () => { tg.BackButton.offClick(handler) }
+    } catch {}
   }, [location.pathname, navigate])
 }
