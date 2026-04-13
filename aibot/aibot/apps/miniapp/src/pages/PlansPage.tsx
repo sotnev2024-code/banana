@@ -88,7 +88,7 @@ export default function PlansPage() {
         </div>
       </div>
 
-      <div style={{ padding: '12px 16px 32px' }}>
+      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px 32px', background: 'var(--bg)' }}>
         <button className="btn-primary" onClick={handlePay} disabled={!selected || loading}>
           {loading ? t('plans.paying') : t('plans.pay', { price: String(plan?.priceRub ?? '') })}
         </button>

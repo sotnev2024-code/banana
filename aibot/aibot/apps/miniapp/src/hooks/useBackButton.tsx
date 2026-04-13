@@ -25,11 +25,10 @@ export function useBackButton() {
             })
           } else if (isMainTab) {
             navigate('/feed')
-          } else if (location.pathname.startsWith('/generation/')) {
-            navigate('/feed')
           } else if (location.pathname === '/admin') {
             navigate('/profile')
           } else {
+            // All sub-pages: go back in history (preserves scroll & context)
             navigate(-1)
           }
         } catch {

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { useBackButton } from './hooks/useBackButton'
+import { useScrollRestore } from './hooks/useScrollRestore'
 import { BottomNav } from './components/ui/BottomNav'
 import FeedPage from './pages/FeedPage'
 import CreatePage from './pages/CreatePage'
@@ -21,9 +22,10 @@ import UserProfilePage from './pages/UserProfilePage'
 
 function AppContent() {
   useBackButton()
+  const pageRef = useScrollRestore()
   return (
     <div className="layout">
-        <div className="page">
+        <div className="page" ref={pageRef}>
           <Routes>
             <Route path="/" element={<Navigate to="/feed" replace />} />
             <Route path="/feed" element={<FeedPage />} />

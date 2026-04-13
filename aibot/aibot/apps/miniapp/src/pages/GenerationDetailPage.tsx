@@ -242,12 +242,6 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
         ) : null}
       </div>
 
-      {/* Back button */}
-      <button className="viewer-back" onClick={onBack}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round">
-          <path d="M12 4L6 10l6 6"/>
-        </svg>
-      </button>
 
       {/* Right side buttons */}
       <div className="viewer-actions">
