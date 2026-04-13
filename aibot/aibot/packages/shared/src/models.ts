@@ -351,7 +351,7 @@ export const MODELS: ModelConfig[] = [
     kieModel: 'kling-3.0/motion-control',
     kieEndpoint: '/jobs/createTask',
     settings: [
-      { id: 'mode', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['std', 'pro'], defaultValue: 'std' },
+      { id: 'mode', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['720p', '1080p'], defaultValue: '720p' },
       { id: 'character_orientation', type: 'select', labelRu: 'Ориентация персонажа', labelEn: 'Character orientation', values: ['video', 'image'], defaultValue: 'video' },
       { id: 'background_source', type: 'select', labelRu: 'Источник фона', labelEn: 'Background source', values: ['input_video', 'input_image'], defaultValue: 'input_video' },
     ],
@@ -568,8 +568,8 @@ export function calculatePrice(modelId: string, settings: Record<string, string 
 
     // ── MOTION ──
     case 'kling-3-0-motion': {
-      const mode = String(settings.mode ?? 'std')
-      const rate = mode === 'pro' ? 27 : 20
+      const mode = String(settings.mode ?? '720p')
+      const rate = mode === '1080p' ? 27 : 20
       cost = Math.ceil(rate * 5)
       break
     }
