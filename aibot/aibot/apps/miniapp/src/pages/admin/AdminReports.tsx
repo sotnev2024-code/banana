@@ -15,7 +15,7 @@ export function AdminReports() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {reports.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text2)' }}>No reports</div>}
+      {reports.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text2)' }}>Жалоб нет</div>}
 
       {reports.map(r => (
         <div key={r.id} className="card" style={{ padding: 12 }}>
@@ -26,7 +26,7 @@ export function AdminReports() {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 12, fontWeight: 500 }}>{r.reason}</div>
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>
-                by {r.user?.firstName} | {r.generation?.model} | {r.generation?.reportsCount} total reports
+                от {r.user?.firstName} | {r.generation?.model} | {r.generation?.reportsCount} жалоб
               </div>
               <div style={{ fontSize: 10, color: 'var(--text3)' }}>
                 {new Date(r.createdAt).toLocaleString('ru')}
@@ -34,13 +34,13 @@ export function AdminReports() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-            <button onClick={async () => { await hidePost(r.generation.id); toast('Hidden'); load() }}
+            <button onClick={async () => { await hidePost(r.generation.id); toast('Скрыт'); load() }}
               style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, background: '#fef3cd', color: '#856404' }}>
-              Hide post
+              Скрыть пост
             </button>
-            <button onClick={async () => { if (confirm('Delete?')) { await deletePost(r.generation.id); toast('Deleted'); load() } }}
+            <button onClick={async () => { if (confirm('Удалить?')) { await deletePost(r.generation.id); toast('Удалён'); load() } }}
               style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, background: '#fcebeb', color: 'var(--danger)' }}>
-              Delete post
+              Удалить пост
             </button>
           </div>
         </div>
@@ -49,10 +49,10 @@ export function AdminReports() {
       {pages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 10 }}>
           <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}
-            className="btn-outline" style={{ width: 'auto', padding: '6px 14px', fontSize: 12 }}>Prev</button>
+            className="btn-outline" style={{ width: 'auto', padding: '6px 14px', fontSize: 12 }}>Назад</button>
           <span style={{ fontSize: 13, color: 'var(--text2)', lineHeight: '32px' }}>{page}/{pages}</span>
           <button onClick={() => setPage(Math.min(pages, page + 1))} disabled={page >= pages}
-            className="btn-outline" style={{ width: 'auto', padding: '6px 14px', fontSize: 12 }}>Next</button>
+            className="btn-outline" style={{ width: 'auto', padding: '6px 14px', fontSize: 12 }}>Далее</button>
         </div>
       )}
     </div>

@@ -11,13 +11,13 @@ import { AdminBroadcast } from './AdminBroadcast'
 const ADMIN_IDS = ['1724263429']
 
 const TABS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'users', label: 'Users' },
-  { id: 'feed', label: 'Feed' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'promos', label: 'Promos' },
-  { id: 'broadcast', label: 'Broadcast' },
+  { id: 'dashboard', label: 'Сводка' },
+  { id: 'users', label: 'Пользователи' },
+  { id: 'feed', label: 'Лента' },
+  { id: 'reports', label: 'Жалобы' },
+  { id: 'payments', label: 'Платежи' },
+  { id: 'promos', label: 'Промокоды' },
+  { id: 'broadcast', label: 'Рассылка' },
 ]
 
 export default function AdminPage() {
@@ -25,13 +25,13 @@ export default function AdminPage() {
   const [tab, setTab] = useState('dashboard')
 
   if (!user || !ADMIN_IDS.includes(user.telegramId)) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text2)' }}>Access denied</div>
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text2)' }}>Доступ запрещён</div>
   }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
       <div className="topbar">
-        <div className="topbar-title">Admin</div>
+        <div className="topbar-title">Админ-панель</div>
       </div>
 
       <div className="filter-row">

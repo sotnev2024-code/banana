@@ -226,9 +226,8 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
       {/* Media */}
       <div className="viewer-media">
         {isVideo && item.resultUrl ? (
-          <video ref={videoRef} src={item.resultUrl} loop muted playsInline
+          <video ref={videoRef} src={item.resultUrl} loop playsInline controls
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            onClick={() => videoRef.current?.paused ? videoRef.current?.play() : videoRef.current?.pause()}
           />
         ) : isMusic && item.resultUrl ? (
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
