@@ -130,28 +130,39 @@ const T = (lang: string) => lang === 'en' ? {
   error: '❌ Генерация не удалась. Токены возвращены.',
 }
 
-function categoryKeyboard(lang: string, hasVideoRef: boolean, sessionId: string) {
+function filterModelsForReference(type: GenerationType, refType: string | null): ModelConfig[] {
+  const all = MODELS.filter(m => m.type === type)
+  if (refType === 'image') {
+    // Image reference: need model that accepts image input, exclude audio-driven
+    return all.filter(m => m.supportsImageInput && !m.acceptsAudio)
+  }
+  if (refType === 'video') {
+    // Video reference: need model that accepts video
+    return all.filter(m => m.acceptsVideo)
+  }
+  return all
+}
+
+function categoryKeyboard(lang: string, refType: string | null, sessionId: string) {
   const t = T(lang)
   const rows: any[][] = []
-  rows.push([Markup.button.callback(t.image, `gg:cat:IMAGE:${sessionId}`)])
-  rows.push([Markup.button.callback(t.video, `gg:cat:VIDEO:${sessionId}`)])
-  if (hasVideoRef) rows.push([Markup.button.callback(t.motion, `gg:cat:MOTION:${sessionId}`)])
+  // Show category only if it has at least one compatible model
+  if (filterModelsForReference('IMAGE', refType).length > 0) {
+    rows.push([Markup.button.callback(t.image, `gg:cat:IMAGE:${sessionId}`)])
+  }
+  if (filterModelsForReference('VIDEO', refType).length > 0) {
+    rows.push([Markup.button.callback(t.video, `gg:cat:VIDEO:${sessionId}`)])
+  }
+  if (filterModelsForReference('MOTION', refType).length > 0) {
+    rows.push([Markup.button.callback(t.motion, `gg:cat:MOTION:${sessionId}`)])
+  }
   rows.push([Markup.button.callback(t.cancel, `gg:cancel:${sessionId}`)])
   return Markup.inlineKeyboard(rows)
 }
 
-function modelsKeyboard(lang: string, type: GenerationType, sessionId: string, hasImage: boolean) {
+function modelsKeyboard(lang: string, type: GenerationType, sessionId: string, refType: string | null) {
   const t = T(lang)
-  // Filter MOTION models that require specific references
-  let models = MODELS.filter(m => m.type === type)
-  if (type === 'IMAGE' || type === 'VIDEO') {
-    // If reference exists, prefer models that support it (but still show all)
-    models = hasImage
-      ? models.filter(m => m.supportsImageInput || type === 'VIDEO')
-      : models.filter(m => !m.supportsImageInput || m.id === 'veo3-fast' || m.id === 'grok-image-to-video' || m.id === 'kling-2-6-i2v' ? !m.supportsImageInput : true)
-    // Simpler: show all
-    models = MODELS.filter(m => m.type === type)
-  }
+  const models = filterModelsForReference(type, refType)
   const rows = models.map(m => [Markup.button.callback(`${m.name} — ${m.tokensPerGeneration}🪙`, `gg:mdl:${m.id}:${sessionId}`)])
   rows.push([Markup.button.callback(t.back, `gg:back:cat:${sessionId}`), Markup.button.callback(t.cancel, `gg:cancel:${sessionId}`)])
   return Markup.inlineKeyboard(rows)
@@ -246,7 +257,7 @@ export async function picCommandHandler(bot: Telegraf<any>, ctx: Context<Update>
   const sent = await ctx.replyWithHTML(
     t.chooseCategory,
     {
-      ...categoryKeyboard(lang, ref?.type === 'video', session.id),
+      ...categoryKeyboard(lang, ref?.type ?? null, session.id),
       reply_parameters: { message_id: msg.message_id },
     } as any,
   )
@@ -260,12 +271,22 @@ export async function picCommandHandler(bot: Telegraf<any>, ctx: Context<Update>
 // ─── Callback handler ─────────────────────────────────────────────────
 
 export async function groupGenCallbackHandler(bot: Telegraf<any>, ctx: Context<Update>) {
+  try {
+    return await groupGenCallbackHandlerImpl(bot, ctx)
+  } catch (e: any) {
+    console.error('[groupGen callback error]', e?.description ?? e?.message ?? e)
+    try { await ctx.answerCbQuery('⚠️ ' + (e?.description ?? e?.message ?? 'error').slice(0, 100)) } catch {}
+  }
+}
+
+async function groupGenCallbackHandlerImpl(bot: Telegraf<any>, ctx: Context<Update>) {
   const cbq = ctx.callbackQuery as any
   if (!cbq?.data || !cbq.data.startsWith('gg:')) return
 
   const parts = cbq.data.split(':')
   const action = parts[1]
   const sessionId = parts[parts.length - 1]
+  console.log(`[groupGen] action=${action} parts=${parts.join('|')} from=${cbq.from.id}`)
 
   const session = await getSession(sessionId)
   if (!session) {
@@ -302,7 +323,7 @@ export async function groupGenCallbackHandler(bot: Telegraf<any>, ctx: Context<U
     await ctx.answerCbQuery()
     await ctx.editMessageText(t.chooseModel, {
       parse_mode: 'HTML',
-      reply_markup: modelsKeyboard(lang, category, sessionId, !!session.refImageUrl).reply_markup,
+      reply_markup: modelsKeyboard(lang, category, sessionId, session.refFileType).reply_markup,
     })
     return
   }
@@ -312,7 +333,7 @@ export async function groupGenCallbackHandler(bot: Telegraf<any>, ctx: Context<U
     await ctx.answerCbQuery()
     await ctx.editMessageText(t.chooseCategory, {
       parse_mode: 'HTML',
-      reply_markup: categoryKeyboard(lang, session.refFileType === 'video', sessionId).reply_markup,
+      reply_markup: categoryKeyboard(lang, session.refFileType, sessionId).reply_markup,
     })
     return
   }
@@ -324,7 +345,7 @@ export async function groupGenCallbackHandler(bot: Telegraf<any>, ctx: Context<U
     await ctx.answerCbQuery()
     await ctx.editMessageText(t.chooseModel, {
       parse_mode: 'HTML',
-      reply_markup: modelsKeyboard(lang, session.category as GenerationType, sessionId, !!session.refImageUrl).reply_markup,
+      reply_markup: modelsKeyboard(lang, session.category as GenerationType, sessionId, session.refFileType).reply_markup,
     })
     return
   }
