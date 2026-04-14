@@ -67,6 +67,10 @@ model Generation {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  // Group chat origin (for /pic command flow)
+  sourceChatId    String?
+  sourceMessageId Int?
+
   favorites    Favorite[]
   likes        Like[]
   comments     Comment[]
@@ -77,6 +81,28 @@ model Generation {
   @@index([type])
   @@index([status])
   @@index([isPublic, createdAt])
+}
+
+model GroupGenSession {
+  id                String   @id @default(cuid())
+  chatId            String
+  userId            String
+  botMessageId      Int      // our interactive message being edited
+  originalMessageId Int      // the replied photo/video message
+  refImageUrl       String?  // uploaded reference file URL
+  refFileType       String?  // 'image' | 'video'
+  category          String?  // 'IMAGE' | 'VIDEO' | 'MOTION'
+  modelId           String?
+  settings          Json     @default("{}")
+  isPublic          Boolean  @default(true)
+  status            String   @default("CONFIGURING") // CONFIGURING | AWAITING_PROMPT | GENERATING | DONE | EXPIRED
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  expiresAt         DateTime
+
+  @@index([chatId, botMessageId])
+  @@index([chatId, userId, status])
+  @@index([expiresAt])
 }
 
 model Notification {

@@ -7,6 +7,7 @@ import { startHandler, langSelectHandler } from './handlers/start'
 import { generateScene } from './scenes/generate'
 import { buyHandler, profileHandler, historyHandler } from './handlers/buy'
 import { subscribeToResults } from './handlers/results'
+import { picCommandHandler, groupGenCallbackHandler, groupReplyPromptHandler } from './handlers/groupGen'
 
 export const prisma = new PrismaClient()
 export const redis = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: null })
@@ -28,8 +29,20 @@ bot.command('buy', buyHandler)
 bot.command('balance', profileHandler)
 bot.command('history', historyHandler)
 
+// Group chat generation via /pic or /picpulse
+bot.command(['pic', 'picpulse'], (ctx) => picCommandHandler(bot, ctx))
+
 // Language selection for new users
 bot.action(/^lang:/, langSelectHandler)
+
+// Group gen callback flow (category, model, settings, go, cancel)
+bot.action(/^gg:/, (ctx) => groupGenCallbackHandler(bot, ctx))
+
+// Reply-with-prompt listener (for group gen AWAITING_PROMPT sessions)
+bot.on('message', async (ctx, next) => {
+  try { await groupReplyPromptHandler(ctx) } catch (e) { console.error('[groupReply]', e) }
+  return next()
+})
 
 // Subscribe to completed generations via Redis pub/sub
 subscribeToResults(bot, redis)

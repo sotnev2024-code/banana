@@ -39,6 +39,21 @@ async function refundTokens(generationId: string) {
     prisma.user.update({ where: { id: gen.userId }, data: { balance: { increment: gen.tokensSpent }, totalSpent: { decrement: gen.tokensSpent } } }),
     prisma.transaction.create({ data: { userId: gen.userId, amount: gen.tokensSpent, type: 'REFUND', description: 'Возврат — ошибка генерации' } }),
   ])
+
+  // Notify source group chat if generation came from there
+  if (gen.sourceChatId && process.env.BOT_TOKEN) {
+    try {
+      await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: gen.sourceChatId,
+          text: `❌ Генерация не удалась. ${gen.tokensSpent} 🪙 возвращены.`,
+          reply_parameters: gen.sourceMessageId ? { message_id: gen.sourceMessageId, allow_sending_without_reply: true } : undefined,
+        }),
+      })
+    } catch {}
+  }
 }
 
 export function startGenerationWorker(connection: ConnectionOptions) {
@@ -149,9 +164,14 @@ export function startGenerationWorker(connection: ConnectionOptions) {
           include: { user: true },
         })
         if (gen?.user) {
-          console.log(`Sending result to user ${gen.user.telegramId}, localUrl=${localUrl}`)
-          await sendResultToUser(gen, localUrl, result.resultUrl)
-          console.log(`Result sent successfully to user ${gen.user.telegramId}`)
+          // If generation originated from a group chat (via /pic), send result there
+          if (gen.sourceChatId) {
+            console.log(`Sending result to group chat ${gen.sourceChatId} (msg ${gen.sourceMessageId})`)
+            await sendResultToGroupChat(gen, localUrl, result.resultUrl)
+          } else {
+            console.log(`Sending result to user ${gen.user.telegramId}, localUrl=${localUrl}`)
+            await sendResultToUser(gen, localUrl, result.resultUrl)
+          }
         } else {
           console.log(`No user found for generation ${generationId}`)
         }
@@ -233,5 +253,76 @@ async function sendResultToUser(gen: any, localUrl: string, originalUrl: string)
     const body = await tgRes.json().catch(() => ({}))
     if (!body.ok) console.error('Telegram send failed:', JSON.stringify(body))
     else console.log('Telegram send ok')
+  }
+}
+
+async function sendResultToGroupChat(gen: any, localUrl: string, originalUrl: string) {
+  const BOT_TOKEN = process.env.BOT_TOKEN
+  if (!BOT_TOKEN || !gen.sourceChatId) return
+
+  const baseUrl = process.env.MINIAPP_URL ?? 'https://picpulse.fun'
+  const viewUrl = `${baseUrl}/generation/${gen.id}`
+
+  const byName = gen.user.username ? `@${gen.user.username}` : gen.user.firstName
+  const caption = `✨ <b>${gen.model.replace(/-/g, ' ')}</b> — ${byName}\n\n${gen.prompt.slice(0, 300)}`
+
+  const inlineKeyboard = JSON.stringify({
+    inline_keyboard: [
+      [{ text: 'HD', url: originalUrl }],
+      [{ text: 'Open in app', url: viewUrl }],
+    ],
+  })
+
+  const tgApi = `https://api.telegram.org/bot${BOT_TOKEN}`
+  const replyParams = gen.sourceMessageId
+    ? { reply_parameters: { message_id: gen.sourceMessageId, allow_sending_without_reply: true } }
+    : {}
+
+  let tgRes: any
+  if (gen.type === 'IMAGE') {
+    tgRes = await fetch(`${tgApi}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: gen.sourceChatId,
+        photo: localUrl,
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard,
+        ...replyParams,
+      }),
+    })
+  } else if (gen.type === 'VIDEO' || gen.type === 'MOTION') {
+    tgRes = await fetch(`${tgApi}/sendVideo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: gen.sourceChatId,
+        video: localUrl,
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard,
+        ...replyParams,
+      }),
+    })
+  } else if (gen.type === 'MUSIC') {
+    tgRes = await fetch(`${tgApi}/sendAudio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: gen.sourceChatId,
+        audio: localUrl,
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard,
+        ...replyParams,
+      }),
+    })
+  }
+
+  if (tgRes) {
+    const body = await tgRes.json().catch(() => ({}))
+    if (!body.ok) console.error('Group chat send failed:', JSON.stringify(body))
+    else console.log('Group chat send ok')
   }
 }
