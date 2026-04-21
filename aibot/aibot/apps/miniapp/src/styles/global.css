@@ -115,6 +115,31 @@ img, video { display: block; max-width: 100%; }
 .nav-tab.active { color: var(--accent); }
 .nav-tab svg { width: 22px; height: 22px; }
 
+/* Elevated center "Create" button */
+.nav-create {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  margin: -22px 6px 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(127, 119, 221, 0.45), 0 2px 4px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  align-self: center;
+}
+.nav-create:active {
+  transform: scale(0.93);
+  box-shadow: 0 3px 10px rgba(127, 119, 221, 0.4);
+}
+.nav-create.active {
+  background: var(--accent-dark);
+}
+.nav-create svg { width: 26px; height: 26px; }
+
 /* Token badge */
 .token-badge {
   display: inline-flex;

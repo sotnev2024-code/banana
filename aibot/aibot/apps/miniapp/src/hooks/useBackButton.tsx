@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
-const MAIN_TABS = ['/feed', '/create', '/history', '/profile']
+const MAIN_TABS = ['/feed', '/create', '/ideas', '/history', '/profile']
 
 export function useBackButton() {
   const location = useLocation()
