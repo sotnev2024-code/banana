@@ -1,6 +1,12 @@
 import { getModel } from './models'
+import * as geminigen from './geminigenai'
 
 const KIE_BASE = 'https://api.kie.ai/api/v1'
+
+// Feature flag: when "true", supported models are routed through GeminiGen.
+// Task ids returned for those get "gg_" prefix so pollTask can route back.
+const USE_GEMINIGEN = () => process.env.USE_GEMINIGEN === 'true'
+const GG_PREFIX = 'gg_'
 
 interface KieResponse {
   code: number
@@ -58,6 +64,13 @@ export async function generate(
 ): Promise<string> {
   const model = getModel(modelId)
   if (!model) throw new Error(`Unknown model: ${modelId}`)
+
+  // ── Route to GeminiGen when flag is on and model is supported ──
+  if (USE_GEMINIGEN() && geminigen.isSupported(modelId)) {
+    console.log(`[router] -> GeminiGen for ${modelId}`)
+    const uuid = await geminigen.generate(modelId, prompt, imageUrl, settings)
+    return GG_PREFIX + uuid
+  }
 
   const endpoint = model.kieEndpoint
   const kieModel = model.kieModel
@@ -249,6 +262,11 @@ export const generateMusic = (prompt: string, model: string, callBackUrl?: strin
 // ─── Poll task status ────────────────────────────────────────────────────────
 
 export async function pollTask(taskId: string): Promise<TaskResult> {
+  // Route to GeminiGen when the task id is prefixed
+  if (taskId.startsWith(GG_PREFIX)) {
+    return geminigen.pollTask(taskId.slice(GG_PREFIX.length))
+  }
+
   // Try /jobs/recordInfo first (for /jobs/createTask models)
   const res = await get(`/jobs/recordInfo?taskId=${taskId}`)
   if (res.code !== 200) {
