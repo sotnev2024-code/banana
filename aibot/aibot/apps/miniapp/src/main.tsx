@@ -11,13 +11,6 @@ try {
     tg.ready()
     tg.expand()
 
-    // Request fullscreen on mobile
-    try {
-      if (typeof (tg as any).requestFullscreen === 'function') {
-        (tg as any).requestFullscreen()
-      }
-    } catch {}
-
     // Disable swipe-down to close
     try {
       if (typeof (tg as any).disableVerticalSwipes === 'function') {
