@@ -168,13 +168,14 @@ async function generateTask(
       if (imgs.length > 1) input.reference_image_urls = imgs.slice(1)
       if (vids.length > 0) input.reference_video_urls = vids
       if (auds.length > 0) input.reference_audio_urls = auds
+    } else if (kieModel === 'gpt-image-2-image-to-image') {
+      // GPT Image 2 image-to-image expects `input_urls` (NOT `image_urls`).
+      // Must be checked BEFORE the generic includes('image-to-image') below.
+      input.input_urls = validUrls.slice(0, 16)
     } else if (kieModel.includes('image-to-video')) {
       input.image_urls = validUrls.slice(0, 1)
     } else if (kieModel.includes('image-to-image')) {
       input.image_urls = validUrls
-    } else if (kieModel === 'gpt-image-2-image-to-image') {
-      // GPT Image 2 image-to-image: input_urls (max 16)
-      input.input_urls = validUrls.slice(0, 16)
     } else if (kieModel.includes('motion-control')) {
       const imgs = validUrls.filter(u => !u.match(/\.(mp4|mov)$/i))
       const vids = validUrls.filter(u => u.match(/\.(mp4|mov)$/i))
