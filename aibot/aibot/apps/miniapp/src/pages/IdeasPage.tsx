@@ -154,31 +154,48 @@ const catIcon: Record<CategoryId | 'all', string> = {
 
 function IdeaCard({ idea, lang, onUse }: { idea: Idea; lang: string; onUse: () => void }) {
   const text = lang === 'en' ? idea.promptEn : idea.prompt
+  const cat = categories.find(c => c.id === idea.category)
   return (
-    <div className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div onClick={onUse} style={{
+      position: 'relative', aspectRatio: '1 / 1',
+      borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
+      border: '1px solid var(--border)',
+      background: idea.gradient,
+    }}>
+      {/* gradient overlay */}
       <div style={{
-        height: 120, background: idea.gradient, position: 'relative',
-        display: 'flex', alignItems: 'flex-end', padding: 12,
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.88) 100%)',
+      }} />
+
+      {/* category badge top-right */}
+      <div style={{
+        position: 'absolute', top: 6, right: 6,
+        padding: '2px 6px', borderRadius: 4,
+        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+        fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)',
+        fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase',
       }}>
-        <div style={{
-          position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.3)',
-          borderRadius: 6, padding: '3px 8px', fontSize: 10, color: '#fff', fontWeight: 500,
-          textTransform: 'uppercase', letterSpacing: 0.5, backdropFilter: 'blur(4px)',
-        }}>
-          {categories.find(c => c.id === idea.category)?.[lang === 'en' ? 'labelEn' : 'labelRu']}
-        </div>
+        {cat ? (lang === 'en' ? cat.labelEn : cat.labelRu) : ''}
       </div>
-      <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.45, flex: 1 }}>
+
+      {/* prompt text + model bottom */}
+      <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8 }}>
+        {idea.model && (
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)',
+            fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4,
+          }}>
+            ✦ {idea.model}
+          </div>
+        )}
+        <div style={{
+          color: '#fff', fontSize: 11, lineHeight: 1.35,
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
           {text}
         </div>
-        <button
-          className="btn-outline"
-          style={{ padding: '8px 0', fontSize: 13, borderRadius: 10 }}
-          onClick={onUse}
-        >
-          {lang === 'en' ? 'Use this prompt' : 'Использовать промпт'}
-        </button>
       </div>
     </div>
   )
@@ -197,52 +214,48 @@ export default function IdeasPage() {
 
   return (
     <>
+      {/* Header */}
       <div className="topbar">
-        <div className="topbar-title">{lang === 'en' ? 'Ideas' : 'Идеи для генерации'}</div>
+        <div className="topbar-eyebrow">INSPO // GALLERY</div>
+        <div className="topbar-title">{lang === 'en' ? 'IDEAS' : 'ИДЕИ'}</div>
+        <div className="topbar-sub">
+          {lang === 'en' ? 'Tap to view the prompt & recreate' : 'Нажми — увидишь промт и повторишь'}
+        </div>
       </div>
 
-      {/* Category chips */}
-      <div style={{
-        display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px 4px',
-        scrollbarWidth: 'none',
-      }}>
+      {/* Search bar (decorative) */}
+      <div style={{ padding: '12px 16px 8px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 12px', borderRadius: 10,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth={2}>
+            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" strokeLinecap="round"/>
+          </svg>
+          <span style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+            {lang === 'en' ? 'search ideas...' : 'поиск идей...'}
+          </span>
+        </div>
+      </div>
+
+      {/* Category chips (mono pill style) */}
+      <div className="filter-row noscroll">
         {categories.map(c => {
           const active = c.id === activeCat
           return (
-            <button
-              key={c.id}
-              onClick={() => setActiveCat(c.id)}
-              style={{
-                flexShrink: 0,
-                padding: '7px 14px',
-                borderRadius: 18,
-                fontSize: 13,
-                fontWeight: 500,
-                background: active ? 'var(--accent)' : 'var(--surface2)',
-                color: active ? '#fff' : 'var(--text2)',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
-              }}
-            >
+            <button key={c.id} className={`filter-pill ${active ? 'active' : ''}`}
+              onClick={() => setActiveCat(c.id)}>
               {lang === 'en' ? c.labelEn : c.labelRu}
             </button>
           )
         })}
       </div>
 
-      {/* Subtitle / hint */}
-      <div style={{ padding: '6px 16px 14px', fontSize: 12, color: 'var(--text3)' }}>
-        {lang === 'en'
-          ? 'Tap a card to use the prompt in the generator'
-          : 'Нажмите на карточку, чтобы использовать промпт в генераторе'}
-      </div>
-
-      {/* Grid */}
+      {/* Grid 2-col */}
       <div style={{
-        padding: '0 16px 100px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: 12,
+        padding: '4px 12px 20px',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
       }}>
         {filtered.map(idea => (
           <IdeaCard key={idea.id} idea={idea} lang={lang} onUse={() => handleUse(idea)} />
