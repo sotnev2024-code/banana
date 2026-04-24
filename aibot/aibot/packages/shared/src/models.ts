@@ -159,6 +159,45 @@ export const MODELS: ModelConfig[] = [
     kieEndpoint: '/jobs/createTask',
     settings: [],
   },
+  {
+    id: 'gpt-image-2',
+    name: 'GPT Image 2',
+    type: 'IMAGE',
+    tokensPerGeneration: 20,
+    supportsImageInput: false,
+    description: 'OpenAI — мощная text-to-image, поддержка 4K',
+    descriptionEn: 'OpenAI — powerful text-to-image, 4K support',
+    maxPromptLength: 20000,
+    resolutions: ['1K', '2K', '4K'],
+    aspectRatios: ['auto', '1:1', '9:16', '16:9', '4:3', '3:4'],
+    pricingNote: '20 cr ($0.10) 1K | 28 cr ($0.14) 2K | 40 cr ($0.20) 4K',
+    kieModel: 'gpt-image-2-text-to-image',
+    kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['auto', '1:1', '9:16', '16:9', '4:3', '3:4'], defaultValue: 'auto' },
+    ],
+  },
+  {
+    id: 'gpt-image-2-edit',
+    name: 'GPT Image 2 Edit',
+    type: 'IMAGE',
+    tokensPerGeneration: 20,
+    supportsImageInput: true,
+    maxImages: 16,
+    description: 'OpenAI — редактирование по референсу, до 16 фото',
+    descriptionEn: 'OpenAI — image editing with up to 16 references',
+    maxPromptLength: 20000,
+    resolutions: ['1K', '2K', '4K'],
+    aspectRatios: ['auto', '1:1', '9:16', '16:9', '4:3', '3:4'],
+    pricingNote: '20 cr ($0.10) 1K | 28 cr ($0.14) 2K | 40 cr ($0.20) 4K',
+    kieModel: 'gpt-image-2-image-to-image',
+    kieEndpoint: '/jobs/createTask',
+    settings: [
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
+      { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['auto', '1:1', '9:16', '16:9', '4:3', '3:4'], defaultValue: 'auto' },
+    ],
+  },
 
   // ══════════════════════ VIDEO ══════════════════════
 
@@ -517,6 +556,14 @@ export function calculatePrice(modelId: string, settings: Record<string, string 
     }
     case 'grok-image-to-image':
       cost = 4; break
+    case 'gpt-image-2':
+    case 'gpt-image-2-edit': {
+      const res = String(settings.resolution ?? '1K')
+      if (res === '1K') cost = 20
+      else if (res === '2K') cost = 28
+      else cost = 40
+      break
+    }
 
     // ── VIDEO ──
     case 'veo3-lite':

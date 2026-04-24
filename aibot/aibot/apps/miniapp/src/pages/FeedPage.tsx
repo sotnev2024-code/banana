@@ -89,40 +89,48 @@ function formatCount(n: number): string {
 function FeaturedCard({ block, onClick }: { block: FeaturedBlockResolved; onClick: () => void }) {
   const isVideo = block.mediaType === 'video'
   return (
-    <div onClick={onClick} className="model-card" style={{ position: 'relative' }}>
+    <div onClick={onClick} className="model-card" style={{
+      minWidth: 200, width: 200, flexShrink: 0, position: 'relative',
+    }}>
       {block.mediaUrl ? (
         isVideo ? (
           <video src={block.mediaUrl} loop muted playsInline autoPlay
-            style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
+            style={{ width: '100%', aspectRatio: '3 / 2', objectFit: 'cover', display: 'block' }} />
         ) : (
           <img src={block.mediaUrl} alt={block.title} loading="lazy"
-            style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
+            style={{ width: '100%', aspectRatio: '3 / 2', objectFit: 'cover', display: 'block' }} />
         )
       ) : (
         <div style={{
-          width: '100%', aspectRatio: '1 / 1',
+          width: '100%', aspectRatio: '3 / 2',
           background: 'linear-gradient(135deg, var(--accent-light), var(--surface2))',
         }} />
       )}
 
       {block.badge && (
         <div style={{
-          position: 'absolute', top: 5, left: 5,
-          padding: '2px 5px', borderRadius: 3,
+          position: 'absolute', top: 6, left: 6,
+          padding: '2px 6px', borderRadius: 4,
           background: 'var(--accent)', color: 'var(--accent-text)',
-          fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, letterSpacing: 0.6,
+          fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: 0.6,
         }}>{block.badge}</div>
       )}
 
-      <div style={{ padding: '6px 8px 8px' }}>
+      <div style={{ padding: '8px 10px 10px' }}>
         <div style={{
-          color: 'var(--text)', fontSize: 11, fontWeight: 600, lineHeight: 1.2,
+          color: 'var(--text)', fontSize: 12, fontWeight: 600, lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{block.title}</div>
+        {block.description && (
+          <div style={{
+            color: 'var(--text2)', fontSize: 10, marginTop: 2, lineHeight: 1.2,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{block.description}</div>
+        )}
         {block.cost !== undefined && (
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 3,
-            fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 5,
+            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent)', fontWeight: 700,
           }}>
             <BoltIcon /> {block.cost}
           </div>
@@ -414,12 +422,11 @@ export default function FeedPage() {
           {lang === 'en' ? 'all →' : 'все →'}
         </button>
       </div>
-      {/* 3-column grid (up to 6 visible: 3x2). Extras hidden — admin can reorder. */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
-        padding: '6px 12px 4px',
+      {/* Horizontal scroller; each card is 3:2 (landscape rectangle) */}
+      <div className="noscroll" style={{
+        display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 16px 4px',
       }}>
-        {featured.slice(0, 6).map(b => (
+        {featured.map(b => (
           <FeaturedCard key={b.id} block={b} onClick={() => handleFeaturedClick(b)} />
         ))}
       </div>
