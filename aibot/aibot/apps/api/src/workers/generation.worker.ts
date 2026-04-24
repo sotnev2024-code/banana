@@ -24,15 +24,20 @@ async function waitForResult(taskId: string): Promise<{ resultUrl: string } | nu
 
 async function refundTokens(generationId: string) {
   const gen = await prisma.generation.findUnique({ where: { id: generationId } })
-  if (!gen || gen.status === 'REFUNDED') return
+  if (!gen) return
+  // Never refund a successfully completed or already-refunded generation.
+  // (BullMQ "stalled" false positives can re-trigger failure handlers
+  //  AFTER status was already set to DONE — without this guard, the user
+  //  gets refunded for a generation they actually received.)
+  if (gen.status === 'DONE' || gen.status === 'REFUNDED') return
 
-  // Atomic: only refund if status is not already REFUNDED
+  // Atomic: only refund if status is still PENDING/PROCESSING/FAILED
   const updated = await prisma.generation.updateMany({
-    where: { id: generationId, status: { not: 'REFUNDED' } },
+    where: { id: generationId, status: { in: ['PENDING', 'PROCESSING', 'FAILED'] } },
     data: { status: 'REFUNDED' },
   })
 
-  // If no rows updated, someone else already refunded
+  // If no rows updated, someone else already refunded or it's DONE
   if (updated.count === 0) return
 
   await prisma.$transaction([
@@ -179,7 +184,17 @@ export function startGenerationWorker(connection: ConnectionOptions) {
         logError('generation.notify', e, { generationId })
       }
     },
-    { connection, concurrency: 5 },
+    {
+      connection,
+      concurrency: 5,
+      // Generation jobs can take up to 10 min (KIE polling + download + ffmpeg).
+      // Default lockDuration is 30s — too short, causes "stalled" false positives
+      // which mark the job failed and refund tokens after a successful generation.
+      lockDuration: 15 * 60 * 1000,         // 15 min
+      lockRenewTime: 5 * 60 * 1000,         // renew every 5 min
+      stalledInterval: 60 * 1000,           // check stalled every minute
+      maxStalledCount: 0,                   // never re-process a "stalled" job
+    },
   )
 
   worker.on('failed', (job, err) => {
