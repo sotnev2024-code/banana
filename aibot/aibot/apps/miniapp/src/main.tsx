@@ -18,11 +18,10 @@ try {
       }
     } catch {}
 
-    // Adapt colors to theme
+    // Neon dark theme for Telegram header + background
     try {
-      const isDark = tg.colorScheme === 'dark'
-      tg.setHeaderColor(isDark ? '#1a1a1e' : '#ffffff')
-      tg.setBackgroundColor(isDark ? '#1a1a1e' : '#f5f5f0')
+      tg.setHeaderColor('#060607')
+      tg.setBackgroundColor('#060607')
     } catch {}
 
     // Set safe area top padding

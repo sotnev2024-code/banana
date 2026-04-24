@@ -11,9 +11,8 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx>({ user: null, loading: true, refresh: async () => {} })
 
 function applyTheme(theme: string) {
-  const resolved = theme === 'auto'
-    ? (window.Telegram?.WebApp?.colorScheme ?? 'light')
-    : theme
+  // Neon Cyber design is dark-first. "auto" → dark unless user explicitly chose light.
+  const resolved = theme === 'light' ? 'light' : 'dark'
   document.documentElement.setAttribute('data-theme', resolved)
 }
 
