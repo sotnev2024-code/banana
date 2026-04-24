@@ -47,7 +47,8 @@ export const adminListFeatured = () => adminReq<any[]>('GET', '/featured')
 export const adminCreateFeatured = (body: any) => adminReq<any>('POST', '/featured', body)
 export const adminUpdateFeatured = (id: string, body: any) => adminReq<any>('PUT', `/featured/${id}`, body)
 export const adminDeleteFeatured = (id: string) => adminReq<any>('DELETE', `/featured/${id}`)
-export const adminSeedFeaturedDefaults = () => adminReq<any[]>('POST', '/featured/seed', {})
+export const adminSeedFeaturedDefaults = () =>
+  adminReq<{ blocks: any[]; created: number; mediaRestored: number }>('POST', '/featured/seed', {})
 
 // Model previews
 export const adminListModelPreviews = () => adminReq<any[]>('GET', '/model-previews')

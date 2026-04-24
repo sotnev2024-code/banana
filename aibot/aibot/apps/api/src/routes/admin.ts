@@ -417,41 +417,72 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  // POST /admin/featured/seed — create the 8 default blocks if list is empty
+  // POST /admin/featured/seed — seed defaults, idempotent.
+  // If a block already exists for a given modelId, ONLY its media (mediaUrl,
+  // mediaType) is restored — the admin's title/badge/etc edits are preserved.
+  // If a block does not exist, it's created with all default fields.
   app.post('/featured/seed', async (_req, reply) => {
-    const existing = await prisma.featuredBlock.count()
-    if (existing > 0) {
-      return reply.code(400).send({ error: 'Список не пуст. Удали существующие блоки перед сидингом.' })
-    }
-    const defaults = [
-      { id: 'nano-banana-pro', badge: 'NEW', title: 'Nano Banana Pro', desc: 'Google Imagen — быстро, до 4K' },
-      { id: 'veo3-fast',       badge: 'HOT', title: 'Veo 3.1 Fast',    desc: 'Google Veo — быстрый, 1080p + аудио' },
-      { id: 'kling-3-0',       badge: null,  title: 'Kling 3.0',       desc: 'Мультишот, элементы, до 15 сек' },
-      { id: 'seedance-2',      badge: null,  title: 'Seedance 2.0',    desc: 'ByteDance — аудио, 4-15 сек' },
-      { id: 'nano-banana-2',   badge: null,  title: 'Nano Banana 2',   desc: 'Дешевая генерация, до 14 референсов' },
-      { id: 'suno-v5-5',       badge: 'PRO', title: 'Suno V5.5',       desc: 'Топовая версия, до 8 минут' },
-      { id: 'kling-3-0-motion',badge: null,  title: 'Kling 3.0 Motion',desc: 'Motion control v3, фото+видео' },
-      { id: 'grok-image-to-video', badge: null, title: 'Grok Animate', desc: 'xAI — анимация фото, до 30 сек' },
+    const baseUrl = process.env.API_URL ?? 'https://picpulse.fun'
+    const previews = (file: string) => `${baseUrl}/uploads/previews/${file}`
+    const defaults: Array<{
+      id: string; badge: string | null; title: string; desc: string;
+      mediaFile: string; mediaType: 'image' | 'video';
+    }> = [
+      { id: 'nano-banana-pro', badge: 'NEW', title: 'Nano Banana Pro', desc: 'Google Imagen — быстро, до 4K',
+        mediaFile: 'nano-banana-pro-thumb.jpg', mediaType: 'image' },
+      { id: 'veo3-fast',       badge: 'HOT', title: 'Veo 3.1 Fast',    desc: 'Google Veo — быстрый, 1080p + аудио',
+        mediaFile: 'veo3-sm.mp4', mediaType: 'video' },
+      { id: 'kling-3-0',       badge: null,  title: 'Kling 3.0',       desc: 'Мультишот, элементы, до 15 сек',
+        mediaFile: 'kling-3-0-sm.mp4', mediaType: 'video' },
+      { id: 'seedance-2',      badge: null,  title: 'Seedance 2.0',    desc: 'ByteDance — аудио, 4-15 сек',
+        mediaFile: 'seedance-2-sm.mp4', mediaType: 'video' },
+      { id: 'nano-banana-2',   badge: null,  title: 'Nano Banana 2',   desc: 'Дешевая генерация, до 14 референсов',
+        mediaFile: 'nano-banana-2-thumb.jpg', mediaType: 'image' },
+      { id: 'suno-v5-5',       badge: 'PRO', title: 'Suno V5.5',       desc: 'Топовая версия, до 8 минут',
+        mediaFile: '', mediaType: 'image' },
+      { id: 'kling-3-0-motion',badge: null,  title: 'Kling 3.0 Motion',desc: 'Motion control v3, фото+видео',
+        mediaFile: 'kling-3-0-motion-sm.mp4', mediaType: 'video' },
+      { id: 'grok-image-to-video', badge: null, title: 'Grok Animate', desc: 'xAI — анимация фото, до 30 сек',
+        mediaFile: 'grok-image-to-video-sm.mp4', mediaType: 'video' },
     ]
-    await prisma.featuredBlock.createMany({
-      data: defaults.map((d, i) => ({
-        position: i,
-        mediaUrl: null,
-        mediaType: 'image',
-        badge: d.badge,
-        titleRu: d.title,
-        titleEn: d.title,
-        descriptionRu: d.desc,
-        descriptionEn: d.desc,
-        modelId: d.id,
-        externalUrl: null,
-        enabled: true,
-      })),
-    })
+    let created = 0
+    let mediaRestored = 0
+    for (let i = 0; i < defaults.length; i++) {
+      const d = defaults[i]
+      const mediaUrl = d.mediaFile ? previews(d.mediaFile) : null
+      const existing = await prisma.featuredBlock.findFirst({ where: { modelId: d.id } })
+      if (existing) {
+        // Only restore media — keep admin edits to other fields
+        if (mediaUrl && existing.mediaUrl !== mediaUrl) {
+          await prisma.featuredBlock.update({
+            where: { id: existing.id },
+            data: { mediaUrl, mediaType: d.mediaType },
+          })
+          mediaRestored++
+        }
+      } else {
+        await prisma.featuredBlock.create({
+          data: {
+            position: i,
+            mediaUrl,
+            mediaType: d.mediaType,
+            badge: d.badge,
+            titleRu: d.title,
+            titleEn: d.title,
+            descriptionRu: d.desc,
+            descriptionEn: d.desc,
+            modelId: d.id,
+            externalUrl: null,
+            enabled: true,
+          },
+        })
+        created++
+      }
+    }
     const blocks = await prisma.featuredBlock.findMany({
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     })
-    return reply.send(blocks)
+    return reply.send({ blocks, created, mediaRestored })
   })
 
   // ═══ MODEL PREVIEWS ═══

@@ -61,11 +61,14 @@ export function AdminFeatured() {
   }
 
   const handleSeed = async () => {
-    if (!confirm('Импортировать 8 дефолтных блоков? Они появятся как редактируемые.')) return
+    const msg = blocks.length === 0
+      ? 'Импортировать 8 дефолтных блоков?'
+      : 'Восстановить дефолтные превью у блоков? Заголовки и бейджи не тронутся.'
+    if (!confirm(msg)) return
     try {
-      const seeded = await adminSeedFeaturedDefaults()
-      setBlocks(seeded)
-      toast(`Создано ${seeded.length} блоков`)
+      const res = await adminSeedFeaturedDefaults()
+      setBlocks(res.blocks)
+      toast(`Создано: ${res.created}, превью восстановлено: ${res.mediaRestored}`)
     } catch (e: any) {
       alert(e?.message ?? 'Ошибка')
     }
@@ -75,11 +78,9 @@ export function AdminFeatured() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn-primary" style={{ flex: 1 }} onClick={handleCreate}>+ Создать блок</button>
-        {blocks.length === 0 && (
-          <button className="btn-outline" style={{ flex: 1 }} onClick={handleSeed}>
-            Импортировать дефолтные
-          </button>
-        )}
+        <button className="btn-outline" style={{ flex: 1 }} onClick={handleSeed}>
+          {blocks.length === 0 ? 'Импортировать дефолтные' : 'Восстановить превью'}
+        </button>
       </div>
 
       {blocks.length === 0 && (
