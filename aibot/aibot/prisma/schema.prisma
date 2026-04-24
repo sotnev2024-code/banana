@@ -102,13 +102,14 @@ model FeaturedBlock {
   @@index([enabled, position])
 }
 
-// Per-model media preview override (for Create page model cards).
+// Per-model media preview override + visibility (for Create page).
 // Falls back to /uploads/previews/<modelId>-thumb.* defaults if no row.
 model ModelPreview {
   id        String   @id @default(cuid())
   modelId   String   @unique
-  mediaUrl  String   // /uploads/previews/<file>
+  mediaUrl  String?  // /uploads/featured/<file> — optional (only hide flag may be set)
   mediaType String   @default("image") // 'image' | 'video'
+  hidden    Boolean  @default(false)   // when true: model is filtered out from Create
   updatedAt DateTime @updatedAt
 }
 

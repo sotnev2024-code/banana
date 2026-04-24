@@ -50,8 +50,10 @@ export const adminDeleteFeatured = (id: string) => adminReq<any>('DELETE', `/fea
 
 // Model previews
 export const adminListModelPreviews = () => adminReq<any[]>('GET', '/model-previews')
-export const adminUpsertModelPreview = (modelId: string, body: { mediaUrl: string; mediaType: 'image' | 'video' }) =>
-  adminReq<any>('PUT', `/model-previews/${modelId}`, body)
+export const adminUpsertModelPreview = (
+  modelId: string,
+  body: { mediaUrl?: string | null; mediaType?: 'image' | 'video'; hidden?: boolean },
+) => adminReq<any>('PUT', `/model-previews/${modelId}`, body)
 export const adminDeleteModelPreview = (modelId: string) => adminReq<any>('DELETE', `/model-previews/${modelId}`)
 
 // Media upload (with compression on server)

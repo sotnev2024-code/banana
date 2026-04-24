@@ -87,54 +87,44 @@ function formatCount(n: number): string {
 // ─── Featured card (horizontal scroller) ───
 
 function FeaturedCard({ block, onClick }: { block: FeaturedBlockResolved; onClick: () => void }) {
-  const lang = getLang()
   const isVideo = block.mediaType === 'video'
   return (
-    <div onClick={onClick} className="model-card" style={{
-      minWidth: 165, width: 165, flexShrink: 0,
-      position: 'relative',
-    }}>
+    <div onClick={onClick} className="model-card" style={{ position: 'relative' }}>
       {block.mediaUrl ? (
         isVideo ? (
           <video src={block.mediaUrl} loop muted playsInline autoPlay
-            style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+            style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
         ) : (
           <img src={block.mediaUrl} alt={block.title} loading="lazy"
-            style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+            style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
         )
       ) : (
         <div style={{
-          width: '100%', height: 120,
+          width: '100%', aspectRatio: '1 / 1',
           background: 'linear-gradient(135deg, var(--accent-light), var(--surface2))',
         }} />
       )}
 
       {block.badge && (
         <div style={{
-          position: 'absolute', top: 6, left: 6,
-          padding: '2px 6px', borderRadius: 4,
+          position: 'absolute', top: 5, left: 5,
+          padding: '2px 5px', borderRadius: 3,
           background: 'var(--accent)', color: 'var(--accent-text)',
-          fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, letterSpacing: 0.8,
+          fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, letterSpacing: 0.6,
         }}>{block.badge}</div>
       )}
 
-      <div style={{ padding: '10px 10px 12px' }}>
+      <div style={{ padding: '6px 8px 8px' }}>
         <div style={{
-          color: 'var(--text)', fontSize: 13, fontWeight: 600, lineHeight: 1.2,
+          color: 'var(--text)', fontSize: 11, fontWeight: 600, lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{block.title}</div>
-        {block.description && (
-          <div style={{
-            color: 'var(--text2)', fontSize: 11, marginTop: 3, lineHeight: 1.3,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{block.description}</div>
-        )}
         {block.cost !== undefined && (
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6,
-            fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent)', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 3,
+            fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)', fontWeight: 700,
           }}>
-            <BoltIcon /> {block.cost} · {lang === 'en' ? 'create' : 'создать'} →
+            <BoltIcon /> {block.cost}
           </div>
         )}
       </div>
@@ -371,7 +361,7 @@ export default function FeedPage() {
     <>
       {/* ── Header: wordmark + token badge ── */}
       <div style={{
-        padding: '56px 16px 8px',
+        padding: '12px 16px 8px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         position: 'relative', zIndex: 5,
       }}>
@@ -424,10 +414,12 @@ export default function FeedPage() {
           {lang === 'en' ? 'all →' : 'все →'}
         </button>
       </div>
-      <div className="noscroll" style={{
-        display: 'flex', gap: 10, overflowX: 'auto', padding: '6px 16px 4px',
+      {/* 3-column grid (up to 6 visible: 3x2). Extras hidden — admin can reorder. */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
+        padding: '6px 12px 4px',
       }}>
-        {featured.map(b => (
+        {featured.slice(0, 6).map(b => (
           <FeaturedCard key={b.id} block={b} onClick={() => handleFeaturedClick(b)} />
         ))}
       </div>

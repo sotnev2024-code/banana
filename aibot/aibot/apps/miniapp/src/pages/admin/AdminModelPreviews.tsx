@@ -9,8 +9,9 @@ import { toast } from '../../components/ui/Toast'
 interface Preview {
   id: string
   modelId: string
-  mediaUrl: string
+  mediaUrl: string | null
   mediaType: 'image' | 'video'
+  hidden: boolean
   updatedAt: string
 }
 
@@ -68,7 +69,7 @@ function ModelRow({ model, preview, onUpdate }: {
     setUploading(true)
     try {
       const { url, mediaType } = await adminUploadMedia(file)
-      const saved = await adminUpsertModelPreview(model.id, { mediaUrl: url, mediaType })
+      const saved = await adminUpsertModelPreview(model.id, { mediaUrl: url, mediaType, hidden: preview?.hidden ?? false })
       onUpdate(saved)
       toast(`${model.name} обновлён`)
     } catch (err: any) {
@@ -79,6 +80,17 @@ function ModelRow({ model, preview, onUpdate }: {
     }
   }
 
+  const handleToggleHide = async () => {
+    const newHidden = !(preview?.hidden ?? false)
+    try {
+      const saved = await adminUpsertModelPreview(model.id, { hidden: newHidden })
+      onUpdate(saved)
+      toast(newHidden ? 'Скрыто' : 'Показано')
+    } catch (err: any) {
+      alert(err.message ?? 'Error')
+    }
+  }
+
   const handleReset = async () => {
     if (!confirm(`Сбросить превью для ${model.name}? Будет использован дефолтный.`)) return
     await adminDeleteModelPreview(model.id)
@@ -86,10 +98,15 @@ function ModelRow({ model, preview, onUpdate }: {
     toast('Сброшено')
   }
 
+  const isHidden = preview?.hidden ?? false
+
   return (
-    <div className="card" style={{ padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+    <div className="card" style={{
+      padding: 10, display: 'flex', gap: 10, alignItems: 'center',
+      opacity: isHidden ? 0.5 : 1,
+    }}>
       <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', background: 'var(--surface2)', flexShrink: 0 }}>
-        {preview ? (
+        {preview?.mediaUrl ? (
           preview.mediaType === 'video'
             ? <video src={preview.mediaUrl} muted playsInline autoPlay loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <img src={preview.mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -101,13 +118,22 @@ function ModelRow({ model, preview, onUpdate }: {
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{model.name}</div>
         <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
           {model.id} · {model.type}
+          {isHidden && <span style={{ color: 'var(--danger)', marginLeft: 4 }}>· СКРЫТО</span>}
         </div>
       </div>
       <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleUpload} style={{ display: 'none' }} />
+      <button onClick={handleToggleHide} className="btn-chip"
+        style={{
+          background: isHidden ? 'var(--surface2)' : 'var(--accent-light)',
+          color: isHidden ? 'var(--text3)' : 'var(--accent)',
+          borderColor: isHidden ? 'var(--border)' : 'var(--accent)',
+        }}>
+        {isHidden ? 'Скрыто' : 'Видно'}
+      </button>
       <button onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-chip">
         {uploading ? '...' : 'Загр.'}
       </button>
-      {preview && <button onClick={handleReset} className="btn-chip" style={{ color: 'var(--danger)' }}>×</button>}
+      {preview?.mediaUrl && <button onClick={handleReset} className="btn-chip" style={{ color: 'var(--danger)' }}>×</button>}
     </div>
   )
 }

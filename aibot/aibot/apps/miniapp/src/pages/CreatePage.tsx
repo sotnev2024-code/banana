@@ -8,20 +8,23 @@ import { t, getLang } from '../i18n'
 
 const PREVIEW_BASE = '/uploads/previews'
 
-// Admin-uploaded model previews override the bundled defaults below.
+// Admin-uploaded model previews override the bundled defaults; hidden models are filtered out.
 const adminPreviewOverrides: Record<string, { type: 'image' | 'video'; url: string }> = {}
+const adminHiddenModels = new Set<string>()
 let overridesLoaded = false
-function loadAdminOverrides() {
-  if (overridesLoaded) return
+function loadAdminOverrides(onLoad?: () => void) {
+  if (overridesLoaded) { onLoad?.(); return }
   overridesLoaded = true
   fetch(`${import.meta.env.VITE_API_URL}/feed/model-previews`)
     .then(r => r.json())
-    .then((rows: { modelId: string; mediaUrl: string; mediaType: 'image' | 'video' }[]) => {
+    .then((rows: { modelId: string; mediaUrl: string | null; mediaType: 'image' | 'video'; hidden: boolean }[]) => {
       for (const r of rows) {
-        adminPreviewOverrides[r.modelId] = { type: r.mediaType, url: r.mediaUrl }
+        if (r.mediaUrl) adminPreviewOverrides[r.modelId] = { type: r.mediaType, url: r.mediaUrl }
+        if (r.hidden) adminHiddenModels.add(r.modelId)
       }
+      onLoad?.()
     })
-    .catch(() => {})
+    .catch(() => onLoad?.())
 }
 
 // Models with image/video previews on server
@@ -147,10 +150,11 @@ export default function CreatePage() {
   const [isPublic, setIsPublic] = useState(true)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const models = getModelsByType(type as any)
+  const [, forceRender] = useState(0)
+  const models = getModelsByType(type as any).filter(m => !adminHiddenModels.has(m.id))
 
-  // Load admin model preview overrides once
-  useEffect(() => { loadAdminOverrides() }, [])
+  // Load admin model preview overrides once, then re-render so hidden filter applies
+  useEffect(() => { loadAdminOverrides(() => forceRender(n => n + 1)) }, [])
 
   useEffect(() => {
     if (models.length > 0) setSelectedModel(models[0].id)

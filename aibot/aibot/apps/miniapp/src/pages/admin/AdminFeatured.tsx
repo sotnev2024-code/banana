@@ -21,22 +21,28 @@ interface Block {
   enabled: boolean
 }
 
+const PRESET_BADGES = ['NEW', 'TOP', 'HOT', 'PRO', 'BETA', 'SALE']
+
 export function AdminFeatured() {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [editing, setEditing] = useState<Block | null>(null)
-  const [creating, setCreating] = useState(false)
 
   const load = () => adminListFeatured().then(setBlocks).catch(() => {})
   useEffect(() => { load() }, [])
 
   const handleCreate = async () => {
-    const block = await adminCreateFeatured({
-      mediaType: 'image', enabled: true,
-      titleRu: 'Новый блок', titleEn: 'New block',
-    })
-    setBlocks(prev => [...prev, block])
-    setEditing(block)
-    setCreating(false)
+    try {
+      const block = await adminCreateFeatured({
+        mediaType: 'image', enabled: true,
+        titleRu: 'Новый блок', titleEn: 'New block',
+      })
+      setBlocks(prev => [...prev, block])
+      setEditing(block)
+      toast('Создан')
+    } catch (e: any) {
+      const msg = e?.message ?? 'unknown'
+      alert(`Не удалось создать блок: ${msg}\n\nПроверь, что на сервере выполнено:\n  npx prisma db push\n  npx prisma generate\n  cd apps/api && npx tsc\n  pm2 restart picpulse-api --update-env`)
+    }
   }
 
   const handleSave = async (updated: Block) => {
@@ -193,10 +199,26 @@ function BlockEditor({ block, onClose, onSave }: {
           <input className="setting-text-input" value={draft.descriptionEn ?? ''} onChange={e => setDraft({ ...draft, descriptionEn: e.target.value })} />
         </div>
 
-        {/* Badge */}
+        {/* Badge — chip selector + custom */}
         <div className="setting-row">
-          <div className="setting-label">Бейдж (HOT, NEW, PRO...)</div>
-          <input className="setting-text-input" value={draft.badge ?? ''} onChange={e => setDraft({ ...draft, badge: e.target.value || null })} />
+          <div className="setting-label">Бейдж</div>
+          <div className="setting-chips">
+            <button className={`setting-chip ${!draft.badge ? 'active' : ''}`}
+              onClick={() => setDraft({ ...draft, badge: null })}>
+              нет
+            </button>
+            {PRESET_BADGES.map(tag => (
+              <button key={tag}
+                className={`setting-chip ${draft.badge === tag ? 'active' : ''}`}
+                onClick={() => setDraft({ ...draft, badge: tag })}>
+                {tag}
+              </button>
+            ))}
+          </div>
+          <input className="setting-text-input" placeholder="или свой бейдж..."
+            value={draft.badge && !PRESET_BADGES.includes(draft.badge) ? draft.badge : ''}
+            onChange={e => setDraft({ ...draft, badge: e.target.value || null })}
+            style={{ marginTop: 6 }} />
         </div>
 
         {/* Target selector */}

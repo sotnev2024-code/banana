@@ -426,11 +426,20 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.put('/model-previews/:modelId', async (req, reply) => {
     const { modelId } = req.params as { modelId: string }
-    const { mediaUrl, mediaType } = req.body as { mediaUrl: string; mediaType: 'image' | 'video' }
+    const body = req.body as { mediaUrl?: string | null; mediaType?: 'image' | 'video'; hidden?: boolean }
     const preview = await prisma.modelPreview.upsert({
       where: { modelId },
-      create: { modelId, mediaUrl, mediaType },
-      update: { mediaUrl, mediaType },
+      create: {
+        modelId,
+        mediaUrl: body.mediaUrl ?? null,
+        mediaType: body.mediaType ?? 'image',
+        hidden: body.hidden ?? false,
+      },
+      update: {
+        ...(body.mediaUrl !== undefined && { mediaUrl: body.mediaUrl }),
+        ...(body.mediaType !== undefined && { mediaType: body.mediaType }),
+        ...(body.hidden !== undefined && { hidden: body.hidden }),
+      },
     })
     return reply.send(preview)
   })
