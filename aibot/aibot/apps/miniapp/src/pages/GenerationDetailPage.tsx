@@ -142,6 +142,7 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
   const [showReport, setShowReport] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportComment, setReportComment] = useState('')
+  const [showAddIdea, setShowAddIdea] = useState(false)
   const [reportSending, setReportSending] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -292,6 +293,17 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
             <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
           </svg>
         </button>
+
+        {/* Add to Ideas (admin only) */}
+        {isAdmin && (
+          <button className="viewer-action-btn" onClick={() => setShowAddIdea(true)}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18h6M10 22h4"/>
+              <path d="M12 2a7 7 0 00-4 12.7c.6.4 1 1.1 1 1.9V17h6v-.4c0-.8.4-1.5 1-1.9A7 7 0 0012 2z"/>
+            </svg>
+            <span className="viewer-action-label">в идеи</span>
+          </button>
+        )}
 
         {/* Share */}
         <button className="viewer-action-btn" onClick={() => {
@@ -510,6 +522,134 @@ function ViewerSlide({ item, detail, isActive, showComments, showPromptPanel, on
           </div>
         </div>
       )}
+
+      {/* Add to Ideas modal (admin only) */}
+      {showAddIdea && (
+        <AddIdeaModal item={item} onClose={() => setShowAddIdea(false)} />
+      )}
+    </div>
+  )
+}
+
+// ─── Add to Ideas modal (admin) ─────────────────────────────────────
+
+function AddIdeaModal({ item, onClose }: { item: Generation; onClose: () => void }) {
+  const [categories, setCategories] = useState<{ id: string; nameRu: string; nameEn: string }[]>([])
+  const [categoryId, setCategoryId] = useState<string>('')
+  const [promptRu, setPromptRu] = useState(item.prompt)
+  const [promptEn, setPromptEn] = useState(item.prompt)
+  const [badge, setBadge] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const lang = getLang()
+
+  useEffect(() => {
+    import('../api/client').then(({ getIdeaCategories }) => {
+      getIdeaCategories().then(cats => {
+        setCategories(cats)
+        if (cats.length > 0) setCategoryId(cats[0].id)
+      }).catch(() => {})
+    })
+  }, [])
+
+  const PRESETS = ['NEW', 'TOP', 'HOT', 'PRO', 'BETA', 'SALE', 'VIRAL']
+
+  const handleSave = async () => {
+    if (!categoryId) {
+      alert('Сначала создай хотя бы одну категорию в админке.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { adminCreateIdea } = await import('./admin/api')
+      const mediaType = (item.type === 'VIDEO' || item.type === 'MOTION') ? 'video' : 'image'
+      const mediaUrl = (item as any).thumbnailUrl ?? item.resultUrl ?? null
+      await adminCreateIdea({
+        categoryId,
+        modelId: item.model,
+        promptRu: promptRu.trim(),
+        promptEn: promptEn.trim(),
+        mediaUrl,
+        mediaType,
+        badge,
+        enabled: true,
+      })
+      toast(lang === 'en' ? 'Added to Ideas' : 'Добавлено в идеи')
+      onClose()
+    } catch (e: any) {
+      alert(e?.message ?? 'Ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 600,
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }}>
+      <div onClick={e => e.stopPropagation()} className="card" style={{
+        width: '100%', maxWidth: 420, padding: 16,
+        borderRadius: '16px 16px 0 0',
+        display: 'flex', flexDirection: 'column', gap: 12,
+        maxHeight: '85vh', overflow: 'auto',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>
+            {lang === 'en' ? 'Add to Ideas' : 'Добавить в идеи'}
+          </div>
+          <button onClick={onClose} className="btn-chip">×</button>
+        </div>
+
+        {categories.length === 0 ? (
+          <div style={{ fontSize: 12, color: 'var(--text2)', padding: 8 }}>
+            Сначала создай хотя бы одну категорию в админке (Идеи → Категории).
+          </div>
+        ) : (
+          <>
+            <div className="setting-row">
+              <div className="setting-label">Категория</div>
+              <select className="setting-text-input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.nameRu}</option>)}
+              </select>
+            </div>
+
+            <div className="setting-row">
+              <div className="setting-label">Промпт RU</div>
+              <textarea className="setting-text-input" rows={3} value={promptRu}
+                onChange={e => setPromptRu(e.target.value)} />
+            </div>
+
+            <div className="setting-row">
+              <div className="setting-label">Промпт EN</div>
+              <textarea className="setting-text-input" rows={3} value={promptEn}
+                onChange={e => setPromptEn(e.target.value)} />
+            </div>
+
+            <div className="setting-row">
+              <div className="setting-label">Бейдж</div>
+              <div className="setting-chips">
+                <button className={`setting-chip ${!badge ? 'active' : ''}`} onClick={() => setBadge(null)}>нет</button>
+                {PRESETS.map(b => (
+                  <button key={b} className={`setting-chip ${badge === b ? 'active' : ''}`}
+                    onClick={() => setBadge(b)}>{b}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{
+              fontSize: 11, color: 'var(--text3)', padding: '6px 0',
+              fontFamily: 'var(--font-mono)',
+            }}>
+              ✦ Модель: {item.model.replace(/-/g, ' ')} · медиа из этой генерации
+            </div>
+
+            <button className="btn-primary" disabled={saving || !promptRu.trim() || !promptEn.trim()}
+              onClick={handleSave}>
+              {saving ? '...' : (lang === 'en' ? 'Save' : 'Сохранить')}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
