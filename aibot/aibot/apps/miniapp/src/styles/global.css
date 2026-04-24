@@ -343,6 +343,10 @@ img, video { display: block; max-width: 100%; }
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .skeleton {
   background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
   background-size: 800px 100%;
