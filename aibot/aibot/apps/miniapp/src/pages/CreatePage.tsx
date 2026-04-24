@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { MODELS, type ModelConfig, getModelsByType, calculatePrice } from '@aibot/shared'
+import { MODELS, type ModelConfig, getModelsByType, calculatePrice, applyConstraints } from '@aibot/shared'
 import { createGeneration, uploadFile } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { ModelSettings } from '../components/ui/ModelSettings'
@@ -342,7 +342,14 @@ export default function CreatePage() {
           <ModelSettings
             settings={model.settings}
             values={modelSettings}
-            onChange={(id, val) => setModelSettings(prev => ({ ...prev, [id]: val }))}
+            constraints={model.constraints}
+            onChange={(id, val) => setModelSettings(prev => {
+              // Apply the change, then run constraints to auto-fix any setting
+              // whose current value just became invalid (e.g. resolution=4K
+              // when aspect_ratio just switched to "auto").
+              const next = { ...prev, [id]: val }
+              return applyConstraints(next, model.settings ?? [], model.constraints)
+            })}
             maxPromptLength={model.maxPromptLength}
             promptLength={prompt.length}
           />

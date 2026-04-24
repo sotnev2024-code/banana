@@ -1,4 +1,4 @@
-import { type SettingOption } from '@aibot/shared'
+import { type SettingOption, type SettingConstraint, getDisabledValues } from '@aibot/shared'
 import { getLang } from '../../i18n'
 
 interface Props {
@@ -7,9 +7,10 @@ interface Props {
   onChange: (id: string, value: string | number | boolean) => void
   maxPromptLength?: number
   promptLength?: number
+  constraints?: SettingConstraint[]
 }
 
-export function ModelSettings({ settings, values, onChange, maxPromptLength, promptLength }: Props) {
+export function ModelSettings({ settings, values, onChange, maxPromptLength, promptLength, constraints }: Props) {
   const lang = getLang()
 
   if (settings.length === 0 && !maxPromptLength) return null
@@ -21,20 +22,39 @@ export function ModelSettings({ settings, values, onChange, maxPromptLength, pro
         const value = values[s.id] ?? s.defaultValue
 
         if (s.type === 'select') {
+          const { disabled, reasons } = getDisabledValues(s.id, values, constraints)
           return (
             <div key={s.id} className="setting-row">
               <div className="setting-label">{label}</div>
               <div className="setting-chips">
-                {s.values!.map(v => (
-                  <button
-                    key={v}
-                    className={`setting-chip ${value === v ? 'active' : ''}`}
-                    onClick={() => onChange(s.id, v)}
-                  >
-                    {v}
-                  </button>
-                ))}
+                {s.values!.map(v => {
+                  const isDisabled = disabled.has(v)
+                  const reason = reasons.get(v)
+                  return (
+                    <button
+                      key={v}
+                      title={isDisabled && reason ? reason : undefined}
+                      className={`setting-chip ${value === v ? 'active' : ''}`}
+                      onClick={() => !isDisabled && onChange(s.id, v)}
+                      style={isDisabled ? {
+                        opacity: 0.35, cursor: 'not-allowed',
+                        textDecoration: 'line-through',
+                      } : undefined}
+                    >
+                      {v}
+                    </button>
+                  )
+                })}
               </div>
+              {/* Show first reason as a hint underneath when something is disabled */}
+              {disabled.size > 0 && (
+                <div style={{
+                  fontSize: 10, color: 'var(--text3)', marginTop: 4,
+                  fontFamily: 'var(--font-mono)',
+                }}>
+                  ⓘ {Array.from(reasons.values())[0]}
+                </div>
+              )}
             </div>
           )
         }

@@ -17,6 +17,15 @@ export interface SettingOption {
   step?: number                  // for slider
 }
 
+// Cross-setting constraint: when condition matches, certain values become invalid.
+// Example: { when: { aspect_ratio: 'auto' }, disable: { resolution: ['2K', '4K'] } }
+//   means "when aspect_ratio is auto, resolution can't be 2K or 4K"
+export interface SettingConstraint {
+  when: Record<string, string | string[]>      // setting → value(s) that activate the rule
+  disable: Record<string, string[]>             // setting → values that become disabled
+  reason?: string                               // hint shown when user hovers a disabled chip
+}
+
 export interface ModelConfig {
   id: string
   name: string
@@ -34,11 +43,60 @@ export interface ModelConfig {
   kieModel: string              // actual model string for kie.ai API
   kieEndpoint: string           // API endpoint path
   settings?: SettingOption[]    // configurable settings for this model
+  constraints?: SettingConstraint[]  // cross-setting validation rules
   maxImages?: number            // max image uploads (0 = none)
   maxVideos?: number            // max video uploads
   maxAudios?: number            // max audio uploads
   acceptsVideo?: boolean        // accepts video reference
   acceptsAudio?: boolean        // accepts audio reference
+}
+
+// Returns the set of values disabled for a given setting based on current selections.
+export function getDisabledValues(
+  settingId: string,
+  currentValues: Record<string, string | number | boolean>,
+  constraints: SettingConstraint[] | undefined,
+): { disabled: Set<string>; reasons: Map<string, string> } {
+  const disabled = new Set<string>()
+  const reasons = new Map<string, string>()
+  if (!constraints) return { disabled, reasons }
+  for (const c of constraints) {
+    // Check if all `when` conditions match current values
+    const matches = Object.entries(c.when).every(([k, v]) => {
+      const cur = String(currentValues[k] ?? '')
+      return Array.isArray(v) ? v.includes(cur) : cur === v
+    })
+    if (!matches) continue
+    const disabledList = c.disable[settingId]
+    if (disabledList) {
+      for (const v of disabledList) {
+        disabled.add(v)
+        if (c.reason) reasons.set(v, c.reason)
+      }
+    }
+  }
+  return { disabled, reasons }
+}
+
+// After a setting change, run constraints to auto-fix other settings whose
+// current value just became invalid. Returns sanitized values map.
+export function applyConstraints(
+  values: Record<string, string | number | boolean>,
+  settings: SettingOption[],
+  constraints: SettingConstraint[] | undefined,
+): Record<string, string | number | boolean> {
+  if (!constraints) return values
+  const out = { ...values }
+  for (const s of settings) {
+    if (s.type !== 'select' || !s.values) continue
+    const { disabled } = getDisabledValues(s.id, out, constraints)
+    const current = String(out[s.id] ?? s.defaultValue ?? '')
+    if (disabled.has(current)) {
+      const firstValid = s.values.find(v => !disabled.has(v))
+      if (firstValid !== undefined) out[s.id] = firstValid
+    }
+  }
+  return out
 }
 
 export const MODELS: ModelConfig[] = [
@@ -174,8 +232,12 @@ export const MODELS: ModelConfig[] = [
     kieModel: 'gpt-image-2-text-to-image',
     kieEndpoint: '/jobs/createTask',
     settings: [
-      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
       { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['auto', '1:1', '9:16', '16:9', '4:3', '3:4'], defaultValue: 'auto' },
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
+    ],
+    constraints: [
+      { when: { aspect_ratio: 'auto' }, disable: { resolution: ['2K', '4K'] }, reason: 'Auto поддерживает только 1K' },
+      { when: { aspect_ratio: '1:1' },  disable: { resolution: ['4K'] },        reason: '1:1 нельзя в 4K' },
     ],
   },
   {
@@ -194,8 +256,12 @@ export const MODELS: ModelConfig[] = [
     kieModel: 'gpt-image-2-image-to-image',
     kieEndpoint: '/jobs/createTask',
     settings: [
-      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
       { id: 'aspect_ratio', type: 'select', labelRu: 'Соотношение сторон', labelEn: 'Aspect ratio', values: ['auto', '1:1', '9:16', '16:9', '4:3', '3:4'], defaultValue: 'auto' },
+      { id: 'resolution', type: 'select', labelRu: 'Разрешение', labelEn: 'Resolution', values: ['1K', '2K', '4K'], defaultValue: '1K' },
+    ],
+    constraints: [
+      { when: { aspect_ratio: 'auto' }, disable: { resolution: ['2K', '4K'] }, reason: 'Auto поддерживает только 1K' },
+      { when: { aspect_ratio: '1:1' },  disable: { resolution: ['4K'] },        reason: '1:1 нельзя в 4K' },
     ],
   },
 

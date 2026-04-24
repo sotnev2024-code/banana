@@ -1,4 +1,4 @@
-import { getModel } from './models'
+import { getModel, applyConstraints } from './models'
 import * as geminigen from './geminigenai'
 
 const KIE_BASE = 'https://api.kie.ai/api/v1'
@@ -83,7 +83,7 @@ export async function generate(
     return generateSuno(kieModel, prompt, settings, callBackUrl)
   }
   // All /jobs/createTask models
-  return generateTask(kieModel, model.type, prompt, imageUrl, settings, callBackUrl)
+  return generateTask(kieModel, model.type, prompt, imageUrl, settings, callBackUrl, modelId)
 }
 
 // /jobs/createTask — most models (image, video, motion)
@@ -94,7 +94,18 @@ async function generateTask(
   imageUrl?: string,
   settings: Record<string, string | number | boolean> = {},
   callBackUrl?: string,
+  modelId?: string,
 ): Promise<string> {
+  // Server-side enforcement: sanitize settings to satisfy model constraints.
+  // Prevents invalid combos from being sent to KIE (e.g. GPT Image 2 with
+  // aspect_ratio=auto + resolution=4K) which would fail and trigger refund.
+  if (modelId) {
+    const m = getModel(modelId)
+    if (m?.settings) {
+      settings = applyConstraints(settings, m.settings, m.constraints)
+    }
+  }
+
   const input: Record<string, unknown> = { prompt }
 
   // Always enable NSFW checker
