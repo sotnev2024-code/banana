@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MODELS } from '@aibot/shared'
 import {
   adminListFeatured, adminCreateFeatured, adminUpdateFeatured,
-  adminDeleteFeatured, adminUploadMedia,
+  adminDeleteFeatured, adminUploadMedia, adminSeedFeaturedDefaults,
 } from './api'
 import { toast } from '../../components/ui/Toast'
 
@@ -60,9 +60,39 @@ export function AdminFeatured() {
     toast('Удалено')
   }
 
+  const handleSeed = async () => {
+    if (!confirm('Импортировать 8 дефолтных блоков? Они появятся как редактируемые.')) return
+    try {
+      const seeded = await adminSeedFeaturedDefaults()
+      setBlocks(seeded)
+      toast(`Создано ${seeded.length} блоков`)
+    } catch (e: any) {
+      alert(e?.message ?? 'Ошибка')
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <button className="btn-primary" onClick={handleCreate}>+ Создать блок</button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-primary" style={{ flex: 1 }} onClick={handleCreate}>+ Создать блок</button>
+        {blocks.length === 0 && (
+          <button className="btn-outline" style={{ flex: 1 }} onClick={handleSeed}>
+            Импортировать дефолтные
+          </button>
+        )}
+      </div>
+
+      {blocks.length === 0 && (
+        <div style={{
+          padding: 12, borderRadius: 10,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          fontSize: 12, color: 'var(--text2)', lineHeight: 1.4,
+        }}>
+          Сейчас в ленте показываются <b>8 дефолтных блоков</b> (зашиты в код).
+          Нажми <b>«Импортировать дефолтные»</b> чтобы создать их в базе — после
+          этого каждый можно будет редактировать или удалить.
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {blocks.map(b => (

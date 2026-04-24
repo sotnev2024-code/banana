@@ -417,6 +417,43 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
+  // POST /admin/featured/seed — create the 8 default blocks if list is empty
+  app.post('/featured/seed', async (_req, reply) => {
+    const existing = await prisma.featuredBlock.count()
+    if (existing > 0) {
+      return reply.code(400).send({ error: 'Список не пуст. Удали существующие блоки перед сидингом.' })
+    }
+    const defaults = [
+      { id: 'nano-banana-pro', badge: 'NEW', title: 'Nano Banana Pro', desc: 'Google Imagen — быстро, до 4K' },
+      { id: 'veo3-fast',       badge: 'HOT', title: 'Veo 3.1 Fast',    desc: 'Google Veo — быстрый, 1080p + аудио' },
+      { id: 'kling-3-0',       badge: null,  title: 'Kling 3.0',       desc: 'Мультишот, элементы, до 15 сек' },
+      { id: 'seedance-2',      badge: null,  title: 'Seedance 2.0',    desc: 'ByteDance — аудио, 4-15 сек' },
+      { id: 'nano-banana-2',   badge: null,  title: 'Nano Banana 2',   desc: 'Дешевая генерация, до 14 референсов' },
+      { id: 'suno-v5-5',       badge: 'PRO', title: 'Suno V5.5',       desc: 'Топовая версия, до 8 минут' },
+      { id: 'kling-3-0-motion',badge: null,  title: 'Kling 3.0 Motion',desc: 'Motion control v3, фото+видео' },
+      { id: 'grok-image-to-video', badge: null, title: 'Grok Animate', desc: 'xAI — анимация фото, до 30 сек' },
+    ]
+    await prisma.featuredBlock.createMany({
+      data: defaults.map((d, i) => ({
+        position: i,
+        mediaUrl: null,
+        mediaType: 'image',
+        badge: d.badge,
+        titleRu: d.title,
+        titleEn: d.title,
+        descriptionRu: d.desc,
+        descriptionEn: d.desc,
+        modelId: d.id,
+        externalUrl: null,
+        enabled: true,
+      })),
+    })
+    const blocks = await prisma.featuredBlock.findMany({
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    })
+    return reply.send(blocks)
+  })
+
   // ═══ MODEL PREVIEWS ═══
 
   app.get('/model-previews', async (_req, reply) => {
