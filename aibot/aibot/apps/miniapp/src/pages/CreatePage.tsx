@@ -8,6 +8,22 @@ import { t, getLang } from '../i18n'
 
 const PREVIEW_BASE = '/uploads/previews'
 
+// Admin-uploaded model previews override the bundled defaults below.
+const adminPreviewOverrides: Record<string, { type: 'image' | 'video'; url: string }> = {}
+let overridesLoaded = false
+function loadAdminOverrides() {
+  if (overridesLoaded) return
+  overridesLoaded = true
+  fetch(`${import.meta.env.VITE_API_URL}/feed/model-previews`)
+    .then(r => r.json())
+    .then((rows: { modelId: string; mediaUrl: string; mediaType: 'image' | 'video' }[]) => {
+      for (const r of rows) {
+        adminPreviewOverrides[r.modelId] = { type: r.mediaType, url: r.mediaUrl }
+      }
+    })
+    .catch(() => {})
+}
+
 // Models with image/video previews on server
 const MODEL_PREVIEWS: Record<string, { type: 'image' | 'video'; file: string }> = {
   // Images
@@ -53,21 +69,24 @@ const TYPE_TABS = [
 ]
 
 function ModelCard({ model, selected, onSelect }: { model: ModelConfig; selected: boolean; onSelect: () => void }) {
-  const preview = MODEL_PREVIEWS[model.id]
+  const override = adminPreviewOverrides[model.id]
+  const defaultPreview = MODEL_PREVIEWS[model.id]
+  const previewSrc = override?.url ?? (defaultPreview ? `${PREVIEW_BASE}/${defaultPreview.file}` : null)
+  const previewType = override?.type ?? defaultPreview?.type
   const isMusic = model.type === 'MUSIC'
   const desc = getLang() === 'en' && model.descriptionEn ? model.descriptionEn : model.description
 
   return (
     <div className={`model-card ${selected ? 'model-card-selected' : ''}`} onClick={onSelect}>
-      {preview?.type === 'video' ? (
+      {previewSrc && previewType === 'video' ? (
         <video
-          src={`${PREVIEW_BASE}/${preview.file}`}
+          src={previewSrc}
           loop muted playsInline autoPlay
           style={{ width: '100%', height: 120, objectFit: 'cover' }}
         />
-      ) : preview?.type === 'image' ? (
+      ) : previewSrc && previewType === 'image' ? (
         <img
-          src={`${PREVIEW_BASE}/${preview.file}`}
+          src={previewSrc}
           alt={model.name}
           loading="lazy"
           style={{ width: '100%', height: 120, objectFit: 'cover' }}
@@ -129,6 +148,9 @@ export default function CreatePage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const models = getModelsByType(type as any)
+
+  // Load admin model preview overrides once
+  useEffect(() => { loadAdminOverrides() }, [])
 
   useEffect(() => {
     if (models.length > 0) setSelectedModel(models[0].id)

@@ -357,6 +357,168 @@ export async function adminRoutes(app: FastifyInstance) {
 
     return reply.send({ sent, failed, total: users.length })
   })
+
+  // ═══ FEATURED BLOCKS ═══
+
+  app.get('/featured', async (_req, reply) => {
+    const blocks = await prisma.featuredBlock.findMany({
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    })
+    return reply.send(blocks)
+  })
+
+  app.post('/featured', async (req, reply) => {
+    const body = req.body as Partial<FeaturedBlockBody>
+    const last = await prisma.featuredBlock.findFirst({ orderBy: { position: 'desc' } })
+    const position = (last?.position ?? -1) + 1
+    const block = await prisma.featuredBlock.create({
+      data: {
+        position,
+        mediaUrl: body.mediaUrl ?? null,
+        mediaType: body.mediaType ?? 'image',
+        badge: body.badge ?? null,
+        titleRu: body.titleRu ?? null,
+        titleEn: body.titleEn ?? null,
+        descriptionRu: body.descriptionRu ?? null,
+        descriptionEn: body.descriptionEn ?? null,
+        modelId: body.modelId ?? null,
+        externalUrl: body.externalUrl ?? null,
+        enabled: body.enabled ?? true,
+      },
+    })
+    return reply.send(block)
+  })
+
+  app.put('/featured/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = req.body as Partial<FeaturedBlockBody>
+    const block = await prisma.featuredBlock.update({
+      where: { id },
+      data: {
+        ...(body.mediaUrl !== undefined && { mediaUrl: body.mediaUrl }),
+        ...(body.mediaType !== undefined && { mediaType: body.mediaType }),
+        ...(body.badge !== undefined && { badge: body.badge }),
+        ...(body.titleRu !== undefined && { titleRu: body.titleRu }),
+        ...(body.titleEn !== undefined && { titleEn: body.titleEn }),
+        ...(body.descriptionRu !== undefined && { descriptionRu: body.descriptionRu }),
+        ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn }),
+        ...(body.modelId !== undefined && { modelId: body.modelId }),
+        ...(body.externalUrl !== undefined && { externalUrl: body.externalUrl }),
+        ...(body.enabled !== undefined && { enabled: body.enabled }),
+        ...(body.position !== undefined && { position: body.position }),
+      },
+    })
+    return reply.send(block)
+  })
+
+  app.delete('/featured/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    await prisma.featuredBlock.delete({ where: { id } })
+    return reply.send({ ok: true })
+  })
+
+  // ═══ MODEL PREVIEWS ═══
+
+  app.get('/model-previews', async (_req, reply) => {
+    const previews = await prisma.modelPreview.findMany()
+    return reply.send(previews)
+  })
+
+  app.put('/model-previews/:modelId', async (req, reply) => {
+    const { modelId } = req.params as { modelId: string }
+    const { mediaUrl, mediaType } = req.body as { mediaUrl: string; mediaType: 'image' | 'video' }
+    const preview = await prisma.modelPreview.upsert({
+      where: { modelId },
+      create: { modelId, mediaUrl, mediaType },
+      update: { mediaUrl, mediaType },
+    })
+    return reply.send(preview)
+  })
+
+  app.delete('/model-previews/:modelId', async (req, reply) => {
+    const { modelId } = req.params as { modelId: string }
+    await prisma.modelPreview.deleteMany({ where: { modelId } })
+    return reply.send({ ok: true })
+  })
+
+  // ═══ MEDIA UPLOAD (with compression) ═══
+
+  // POST /admin/upload-media — accepts image or video, compresses, stores in /uploads/featured/
+  app.post('/upload-media', async (req, reply) => {
+    const data = await (req as any).file()
+    if (!data) return reply.code(400).send({ error: 'No file' })
+    const mime = (data.mimetype as string | undefined) ?? ''
+    const isImage = mime.startsWith('image/')
+    const isVideo = mime.startsWith('video/')
+    if (!isImage && !isVideo) return reply.code(400).send({ error: 'Only image or video' })
+
+    const { execSync } = require('child_process')
+    const fs = require('fs')
+    const crypto = require('crypto')
+    const baseId = crypto.randomBytes(8).toString('hex')
+
+    const featuredDir = '/opt/banana/uploads/featured'
+    execSync(`mkdir -p ${featuredDir}`)
+
+    if (isImage) {
+      // Save raw → convert to WebP (max width 800)
+      const tmpPath = `${featuredDir}/_tmp_${baseId}.bin`
+      const finalName = `${baseId}.webp`
+      const finalPath = `${featuredDir}/${finalName}`
+      const ws = fs.createWriteStream(tmpPath)
+      await new Promise<void>((resolve, reject) => {
+        data.file.pipe(ws)
+        ws.on('finish', () => resolve())
+        ws.on('error', reject)
+      })
+      try {
+        execSync(`cwebp -q 80 -resize 800 0 ${tmpPath} -o ${finalPath} 2>/dev/null`, { timeout: 20000 })
+        fs.unlinkSync(tmpPath)
+        const url = `${process.env.API_URL ?? 'https://picpulse.fun'}/uploads/featured/${finalName}`
+        return reply.send({ url, mediaType: 'image' as const })
+      } catch (e) {
+        try { fs.unlinkSync(tmpPath) } catch {}
+        return reply.code(500).send({ error: 'Image compression failed' })
+      }
+    }
+
+    // Video: save → ffmpeg compress to 720p, mp4, ~1Mbps
+    const tmpPath = `${featuredDir}/_tmp_${baseId}.bin`
+    const finalName = `${baseId}.mp4`
+    const finalPath = `${featuredDir}/${finalName}`
+    const ws = fs.createWriteStream(tmpPath)
+    await new Promise<void>((resolve, reject) => {
+      data.file.pipe(ws)
+      ws.on('finish', () => resolve())
+      ws.on('error', reject)
+    })
+    try {
+      execSync(
+        `ffmpeg -y -i ${tmpPath} -vf "scale='min(720,iw)':-2" -c:v libx264 -preset veryfast -crf 28 -movflags +faststart -an -t 30 ${finalPath} 2>/dev/null`,
+        { timeout: 60000 },
+      )
+      fs.unlinkSync(tmpPath)
+      const url = `${process.env.API_URL ?? 'https://picpulse.fun'}/uploads/featured/${finalName}`
+      return reply.send({ url, mediaType: 'video' as const })
+    } catch (e) {
+      try { fs.unlinkSync(tmpPath) } catch {}
+      return reply.code(500).send({ error: 'Video compression failed' })
+    }
+  })
+}
+
+interface FeaturedBlockBody {
+  position: number
+  mediaUrl: string | null
+  mediaType: 'image' | 'video'
+  badge: string | null
+  titleRu: string | null
+  titleEn: string | null
+  descriptionRu: string | null
+  descriptionEn: string | null
+  modelId: string | null
+  externalUrl: string | null
+  enabled: boolean
 }
 
 function startOfDay(): Date {

@@ -16,6 +16,21 @@ function getThumbnailUrl(resultUrl: string | null, type: string): string | null 
 }
 
 export async function feedRoutes(app: FastifyInstance) {
+  // GET /feed/featured — public list of admin-curated blocks (top of Feed)
+  app.get('/featured', async (_req, reply) => {
+    const blocks = await prisma.featuredBlock.findMany({
+      where: { enabled: true },
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    })
+    return reply.send(blocks)
+  })
+
+  // GET /feed/model-previews — public per-model media overrides
+  app.get('/model-previews', async (_req, reply) => {
+    const previews = await prisma.modelPreview.findMany()
+    return reply.send(previews)
+  })
+
   // GET /feed?cursor=xxx&type=IMAGE&limit=20
   app.get('/', async (req, reply) => {
     const { cursor, type, limit = '20' } = req.query as Record<string, string>

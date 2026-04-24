@@ -8,6 +8,8 @@ import { AdminPayments } from './AdminPayments'
 import { AdminPromos } from './AdminPromos'
 import { AdminBroadcast } from './AdminBroadcast'
 import { AdminLogs } from './AdminLogs'
+import { AdminFeatured } from './AdminFeatured'
+import { AdminModelPreviews } from './AdminModelPreviews'
 
 const ADMIN_IDS = ['1724263429']
 
@@ -15,6 +17,8 @@ const TABS = [
   { id: 'dashboard', label: 'Сводка' },
   { id: 'users', label: 'Пользователи' },
   { id: 'feed', label: 'Лента' },
+  { id: 'featured', label: 'Блоки' },
+  { id: 'previews', label: 'Превью' },
   { id: 'reports', label: 'Жалобы' },
   { id: 'payments', label: 'Платежи' },
   { id: 'promos', label: 'Промокоды' },
@@ -49,6 +53,8 @@ export default function AdminPage() {
         {tab === 'dashboard' && <AdminDashboard />}
         {tab === 'users' && <AdminUsers />}
         {tab === 'feed' && <AdminFeed />}
+        {tab === 'featured' && <AdminFeatured />}
+        {tab === 'previews' && <AdminModelPreviews />}
         {tab === 'reports' && <AdminReports />}
         {tab === 'payments' && <AdminPayments />}
         {tab === 'promos' && <AdminPromos />}

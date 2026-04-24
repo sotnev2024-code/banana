@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MODELS, type ModelConfig } from '@aibot/shared'
-import { getFeed, type Generation } from '../api/client'
+import { MODELS } from '@aibot/shared'
+import { getFeed, getFeaturedBlocks, type Generation } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import { t, getLang } from '../i18n'
 
@@ -13,9 +13,24 @@ const FILTERS = [
   { label: () => t('feed.motion'), value: 'MOTION' },
 ]
 
-// Featured model cards shown in horizontal scroller (admin-curated feel).
-// Each links straight to /create with the model preselected.
-const FEATURED: { id: string; badge?: 'HOT' | 'NEW' | 'PRO'; badgeRu?: string }[] = [
+// Resolved Featured block (after combining DB row + model defaults)
+interface FeaturedBlockResolved {
+  id: string
+  mediaUrl: string | null
+  mediaType: 'image' | 'video'
+  badge?: string | null
+  title: string
+  description?: string | null
+  cost?: number
+  // Click target
+  modelId?: string | null
+  externalUrl?: string | null
+}
+
+const PREVIEW_BASE = '/uploads/previews'
+
+// Default featured fallback (used when admin hasn't configured any blocks yet)
+const DEFAULT_FEATURED: { id: string; badge?: string }[] = [
   { id: 'nano-banana-pro', badge: 'NEW' },
   { id: 'veo3-fast',       badge: 'HOT' },
   { id: 'kling-3-0' },
@@ -26,8 +41,7 @@ const FEATURED: { id: string; badge?: 'HOT' | 'NEW' | 'PRO'; badgeRu?: string }[
   { id: 'grok-image-to-video' },
 ]
 
-const PREVIEW_BASE = '/uploads/previews'
-const PREVIEWS: Record<string, { type: 'image' | 'video'; file: string }> = {
+const DEFAULT_PREVIEWS: Record<string, { type: 'image' | 'video'; file: string }> = {
   'nano-banana-pro':    { type: 'image', file: 'nano-banana-pro-thumb.jpg' },
   'nano-banana-2':      { type: 'image', file: 'nano-banana-2-thumb.jpg' },
   'veo3-fast':          { type: 'video', file: 'veo3-sm.mp4' },
@@ -40,6 +54,23 @@ const PREVIEWS: Record<string, { type: 'image' | 'video'; file: string }> = {
   'grok-image-to-video':{ type: 'video', file: 'grok-image-to-video-sm.mp4' },
   'grok-text-to-video': { type: 'video', file: 'grok-text-to-video-sm.mp4' },
   'kling-2-6-i2v':      { type: 'video', file: 'kling-2-6-i2v-sm.mp4' },
+}
+
+function resolveDefaultFeatured(lang: string): FeaturedBlockResolved[] {
+  return DEFAULT_FEATURED.map(f => {
+    const model = MODELS.find(m => m.id === f.id)
+    const preview = DEFAULT_PREVIEWS[f.id]
+    return {
+      id: f.id,
+      mediaUrl: preview ? `${PREVIEW_BASE}/${preview.file}` : null,
+      mediaType: (preview?.type ?? 'image') as 'image' | 'video',
+      badge: f.badge,
+      title: model?.name ?? f.id,
+      description: model ? (lang === 'en' && model.descriptionEn ? model.descriptionEn : model.description) : '',
+      cost: model?.tokensPerGeneration,
+      modelId: f.id,
+    }
+  })
 }
 
 function modelShortName(raw: string): string {
@@ -55,51 +86,57 @@ function formatCount(n: number): string {
 
 // ─── Featured card (horizontal scroller) ───
 
-function FeaturedCard({ model, badge, onClick }: { model: ModelConfig; badge?: string; onClick: () => void }) {
-  const preview = PREVIEWS[model.id]
+function FeaturedCard({ block, onClick }: { block: FeaturedBlockResolved; onClick: () => void }) {
   const lang = getLang()
+  const isVideo = block.mediaType === 'video'
   return (
-    <div onClick={onClick} style={{
-      minWidth: 112, width: 112, height: 150, flexShrink: 0,
-      borderRadius: 12, overflow: 'hidden', position: 'relative',
-      border: '1px solid var(--border)', cursor: 'pointer',
-      background: 'var(--surface)',
+    <div onClick={onClick} className="model-card" style={{
+      minWidth: 165, width: 165, flexShrink: 0,
+      position: 'relative',
     }}>
-      {preview?.type === 'video' ? (
-        <video src={`${PREVIEW_BASE}/${preview.file}`} loop muted playsInline autoPlay
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : preview?.type === 'image' ? (
-        <img src={`${PREVIEW_BASE}/${preview.file}`} alt={model.name} loading="lazy"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      {block.mediaUrl ? (
+        isVideo ? (
+          <video src={block.mediaUrl} loop muted playsInline autoPlay
+            style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+        ) : (
+          <img src={block.mediaUrl} alt={block.title} loading="lazy"
+            style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+        )
       ) : (
         <div style={{
-          position: 'absolute', inset: 0,
+          width: '100%', height: 120,
           background: 'linear-gradient(135deg, var(--accent-light), var(--surface2))',
         }} />
       )}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.9) 100%)' }} />
-      {badge && (
+
+      {block.badge && (
         <div style={{
           position: 'absolute', top: 6, left: 6,
           padding: '2px 6px', borderRadius: 4,
           background: 'var(--accent)', color: 'var(--accent-text)',
           fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, letterSpacing: 0.8,
-        }}>{badge}</div>
+        }}>{block.badge}</div>
       )}
-      <div style={{ position: 'absolute', bottom: 6, left: 8, right: 8 }}>
+
+      <div style={{ padding: '10px 10px 12px' }}>
         <div style={{
-          fontSize: 9, color: 'var(--accent)', fontFamily: 'var(--font-mono)',
-          fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
-          marginBottom: 2, lineHeight: 1.2,
+          color: 'var(--text)', fontSize: 13, fontWeight: 600, lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>✦ {model.name}</div>
-        <div style={{
-          marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4,
-          fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600,
-        }}>
-          <BoltIcon />
-          {model.tokensPerGeneration} · {lang === 'en' ? 'create' : 'создать'} →
-        </div>
+        }}>{block.title}</div>
+        {block.description && (
+          <div style={{
+            color: 'var(--text2)', fontSize: 11, marginTop: 3, lineHeight: 1.3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{block.description}</div>
+        )}
+        {block.cost !== undefined && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6,
+            fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent)', fontWeight: 600,
+          }}>
+            <BoltIcon /> {block.cost} · {lang === 'en' ? 'create' : 'создать'} →
+          </div>
+        )}
       </div>
     </div>
   )
@@ -123,7 +160,7 @@ function HeartIcon() {
 
 // ─── Feed cell (grid item) ───
 
-function FeedCard({ item, aspectRatio, onClick }: { item: Generation; aspectRatio: string; onClick: () => void }) {
+function FeedCard({ item, onClick }: { item: Generation; onClick: () => void }) {
   const isVideo = item.type === 'VIDEO' || item.type === 'MOTION'
   const isMusic = item.type === 'MUSIC'
   const thumbSrc = (item as any).thumbnailUrl ?? item.resultUrl
@@ -131,10 +168,13 @@ function FeedCard({ item, aspectRatio, onClick }: { item: Generation; aspectRati
   const authorName = item.user?.username ?? item.user?.firstName ?? ''
 
   return (
-    <div className="feed-cell" style={{ aspectRatio }} onClick={onClick}>
-      {/* Media */}
+    <div className="feed-cell" onClick={onClick}>
+      {/* Media — natural height, defines cell size */}
       {isMusic ? (
-        <div className="music-waveform-bg" style={{ position: 'absolute', inset: 0, flexDirection: 'column', gap: 8 }}>
+        <div className="music-waveform-bg" style={{
+          aspectRatio: '4 / 5', display: 'flex',
+          flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
           <div className="waveform-bars">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.11}s` }} />
@@ -145,10 +185,9 @@ function FeedCard({ item, aspectRatio, onClick }: { item: Generation; aspectRati
           </span>
         </div>
       ) : thumbSrc ? (
-        <img src={thumbSrc} alt={item.prompt} loading="lazy"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={thumbSrc} alt={item.prompt} loading="lazy" />
       ) : (
-        <div className="skeleton" style={{ position: 'absolute', inset: 0 }} />
+        <div className="skeleton" style={{ aspectRatio: '4 / 5' }} />
       )}
 
       {/* Play icon for video */}
@@ -213,6 +252,26 @@ export default function FeedPage() {
   const cursorRef = useRef<string | null>(null)
 
   const lang = getLang()
+
+  // Featured blocks (from admin API, with hardcoded fallback if none configured)
+  const [featured, setFeatured] = useState<FeaturedBlockResolved[]>(() => resolveDefaultFeatured(lang))
+  useEffect(() => {
+    getFeaturedBlocks().then(blocks => {
+      if (blocks.length > 0) {
+        setFeatured(blocks.map(b => ({
+          id: b.id,
+          mediaUrl: b.mediaUrl,
+          mediaType: b.mediaType,
+          badge: b.badge,
+          title: lang === 'en' ? (b.titleEn || b.titleRu) : (b.titleRu || b.titleEn),
+          description: lang === 'en' ? b.descriptionEn : b.descriptionRu,
+          cost: b.modelId ? MODELS.find(m => m.id === b.modelId)?.tokensPerGeneration : undefined,
+          modelId: b.modelId,
+          externalUrl: b.externalUrl,
+        })))
+      }
+    }).catch(() => { /* keep defaults */ })
+  }, [lang])
 
   const loadFeed = useCallback(async (reset = false) => {
     if (loadingRef.current) return
@@ -298,6 +357,16 @@ export default function FeedPage() {
     navigate('/create', { state: { model: modelId } })
   }
 
+  const handleFeaturedClick = (block: FeaturedBlockResolved) => {
+    if (block.externalUrl) {
+      try { window.Telegram?.WebApp?.openLink(block.externalUrl) } catch { window.open(block.externalUrl) }
+      return
+    }
+    if (block.modelId) {
+      gotoCreate(block.modelId)
+    }
+  }
+
   return (
     <>
       {/* ── Header: wordmark + token badge ── */}
@@ -358,13 +427,9 @@ export default function FeedPage() {
       <div className="noscroll" style={{
         display: 'flex', gap: 10, overflowX: 'auto', padding: '6px 16px 4px',
       }}>
-        {FEATURED.map(f => {
-          const model = MODELS.find(m => m.id === f.id)
-          if (!model) return null
-          return (
-            <FeaturedCard key={f.id} model={model} badge={f.badge} onClick={() => gotoCreate(f.id)} />
-          )
-        })}
+        {featured.map(b => (
+          <FeaturedCard key={b.id} block={b} onClick={() => handleFeaturedClick(b)} />
+        ))}
       </div>
 
       {/* ── Filter pills ── */}
@@ -377,17 +442,16 @@ export default function FeedPage() {
         ))}
       </div>
 
-      {/* ── 2-col grid ── */}
+      {/* ── Masonry grid (CSS columns) ── */}
       <div ref={scrollRef} className="feed-grid"
         onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-        {items.map((item, i) => (
+        {items.map(item => (
           <FeedCard key={item.id} item={item}
-            aspectRatio={i % 5 === 0 ? '3/5' : '3/4'}
             onClick={() => navigate(`/generation/${item.id}`)} />
         ))}
         {loading && Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="feed-cell" style={{ aspectRatio: i % 3 === 0 ? '3/5' : '3/4' }}>
-            <div className="skeleton" style={{ position: 'absolute', inset: 0 }} />
+          <div key={i} className="feed-cell">
+            <div className="skeleton" style={{ aspectRatio: i % 3 === 0 ? '3/5' : '3/4' }} />
           </div>
         ))}
       </div>

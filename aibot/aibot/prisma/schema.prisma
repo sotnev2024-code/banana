@@ -83,6 +83,35 @@ model Generation {
   @@index([isPublic, createdAt])
 }
 
+model FeaturedBlock {
+  id             String   @id @default(cuid())
+  position       Int      @default(0)
+  mediaUrl       String?  // /uploads/featured/<file>
+  mediaType      String   @default("image") // 'image' | 'video'
+  badge          String?  // e.g. "HOT", "NEW", "PRO"
+  titleRu        String?
+  titleEn        String?
+  descriptionRu  String?
+  descriptionEn  String?
+  modelId        String?  // when set, click navigates to /create with this model
+  externalUrl    String?  // when set, click opens this link
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([enabled, position])
+}
+
+// Per-model media preview override (for Create page model cards).
+// Falls back to /uploads/previews/<modelId>-thumb.* defaults if no row.
+model ModelPreview {
+  id        String   @id @default(cuid())
+  modelId   String   @unique
+  mediaUrl  String   // /uploads/previews/<file>
+  mediaType String   @default("image") // 'image' | 'video'
+  updatedAt DateTime @updatedAt
+}
+
 model GroupGenSession {
   id                String   @id @default(cuid())
   chatId            String

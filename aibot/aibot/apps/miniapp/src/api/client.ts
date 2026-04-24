@@ -142,6 +142,24 @@ export const redeemPromo = (code: string) =>
 export const getStats = () =>
   req<UserStats>('GET', '/me/stats')
 
+// Featured blocks (Feed top scroller)
+export interface FeaturedBlockApi {
+  id: string
+  position: number
+  mediaUrl: string | null
+  mediaType: 'image' | 'video'
+  badge: string | null
+  titleRu: string | null
+  titleEn: string | null
+  descriptionRu: string | null
+  descriptionEn: string | null
+  modelId: string | null
+  externalUrl: string | null
+  enabled: boolean
+}
+export const getFeaturedBlocks = () =>
+  req<FeaturedBlockApi[]>('GET', '/feed/featured')
+
 // Types
 export interface UserFull {
   id: string

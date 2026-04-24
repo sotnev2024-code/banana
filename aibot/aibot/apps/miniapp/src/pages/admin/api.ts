@@ -41,3 +41,30 @@ export const togglePromo = (id: string) => adminReq<any>('POST', `/promos/${id}/
 export const broadcast = (message: string) => adminReq<any>('POST', '/broadcast', { message })
 export const getErrorLogs = (lines = 50) => adminReq<any[]>('GET', `/logs/errors?lines=${lines}`)
 export const getApiLogs = (lines = 50) => adminReq<any[]>('GET', `/logs/api?lines=${lines}`)
+
+// Featured blocks
+export const adminListFeatured = () => adminReq<any[]>('GET', '/featured')
+export const adminCreateFeatured = (body: any) => adminReq<any>('POST', '/featured', body)
+export const adminUpdateFeatured = (id: string, body: any) => adminReq<any>('PUT', `/featured/${id}`, body)
+export const adminDeleteFeatured = (id: string) => adminReq<any>('DELETE', `/featured/${id}`)
+
+// Model previews
+export const adminListModelPreviews = () => adminReq<any[]>('GET', '/model-previews')
+export const adminUpsertModelPreview = (modelId: string, body: { mediaUrl: string; mediaType: 'image' | 'video' }) =>
+  adminReq<any>('PUT', `/model-previews/${modelId}`, body)
+export const adminDeleteModelPreview = (modelId: string) => adminReq<any>('DELETE', `/model-previews/${modelId}`)
+
+// Media upload (with compression on server)
+export async function adminUploadMedia(file: File): Promise<{ url: string; mediaType: 'image' | 'video' }> {
+  const form = new FormData()
+  form.append('file', file)
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${BASE}/admin/upload-media`, { method: 'POST', headers, body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(err.error ?? 'Upload failed')
+  }
+  return res.json()
+}
