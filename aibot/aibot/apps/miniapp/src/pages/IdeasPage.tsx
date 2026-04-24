@@ -1,172 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { t, getLang } from '../i18n'
+import { getIdeas, getIdeaCategories, type IdeaApi, type IdeaCategoryApi } from '../api/client'
+import { getLang } from '../i18n'
 
-type CategoryId = 'portrait' | 'landscape' | 'character' | 'food' | 'animal' | 'fantasy' | 'cyberpunk' | 'anime' | 'product' | 'abstract'
-
-interface Idea {
-  id: string
-  category: CategoryId
-  model?: string
-  type?: 'IMAGE' | 'VIDEO' | 'MUSIC' | 'MOTION'
-  prompt: string
-  promptEn: string
-  gradient: string
+// Deterministic gradient fallback for ideas without uploaded media.
+// Hash slug → two HSL colors so colors stay stable per idea between renders.
+function gradientFor(seed: string): string {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) & 0xffff
+  const a = h % 360
+  const b = (a + 60 + (h >> 4) % 120) % 360
+  return `linear-gradient(135deg, hsl(${a} 60% 35%), hsl(${b} 60% 25%))`
 }
 
-const categories: { id: CategoryId | 'all'; labelRu: string; labelEn: string }[] = [
-  { id: 'all',       labelRu: 'Все',        labelEn: 'All' },
-  { id: 'portrait',  labelRu: 'Портреты',   labelEn: 'Portraits' },
-  { id: 'landscape', labelRu: 'Пейзажи',    labelEn: 'Landscapes' },
-  { id: 'character', labelRu: 'Персонажи',  labelEn: 'Characters' },
-  { id: 'food',      labelRu: 'Еда',        labelEn: 'Food' },
-  { id: 'animal',    labelRu: 'Животные',   labelEn: 'Animals' },
-  { id: 'fantasy',   labelRu: 'Фэнтези',    labelEn: 'Fantasy' },
-  { id: 'cyberpunk', labelRu: 'Киберпанк',  labelEn: 'Cyberpunk' },
-  { id: 'anime',     labelRu: 'Аниме',      labelEn: 'Anime' },
-  { id: 'product',   labelRu: 'Продукты',   labelEn: 'Product' },
-  { id: 'abstract',  labelRu: 'Абстракция', labelEn: 'Abstract' },
-]
+function IdeaCard({ idea, lang, categoryName, onUse }: {
+  idea: IdeaApi; lang: string; categoryName: string; onUse: () => void
+}) {
+  const text = lang === 'en' ? (idea.promptEn || idea.promptRu) : (idea.promptRu || idea.promptEn)
 
-const ideas: Idea[] = [
-  // Portraits
-  { id: 'p1', category: 'portrait',
-    prompt: 'Портрет молодой девушки с рыжими волосами, мягкое солнечное освещение у окна, тёплые тона, кинематографичный фокус, плёночная фотография, детализированная кожа',
-    promptEn: 'Portrait of a young woman with red hair, soft sunlight through the window, warm tones, cinematic focus, film photography, detailed skin',
-    gradient: 'linear-gradient(135deg,#ffd3a5,#fd6585)' },
-  { id: 'p2', category: 'portrait',
-    prompt: 'Монохромный портрет пожилого моряка с глубокими морщинами, седой бородой, шляпой с широкими полями, штормовое море на заднем плане, высокий контраст',
-    promptEn: 'Monochrome portrait of an old sailor with deep wrinkles, grey beard, wide-brimmed hat, stormy sea background, high contrast',
-    gradient: 'linear-gradient(135deg,#667eea,#2c3e50)' },
-  { id: 'p3', category: 'portrait',
-    prompt: 'Стилизованный портрет в стиле cyberpunk: девушка с голографическими очками, неоновые отражения на лице, фиолетово-розовые блики, футуристичная одежда',
-    promptEn: 'Cyberpunk stylized portrait: woman with holographic glasses, neon reflections on face, purple-pink highlights, futuristic outfit',
-    gradient: 'linear-gradient(135deg,#9f7aea,#ed64a6)' },
-
-  // Landscapes
-  { id: 'l1', category: 'landscape',
-    prompt: 'Альпийская долина на рассвете, туман между горами, хрустальное озеро с отражением, пурпурное небо, деревянный домик у воды, реалистичная детализация 4K',
-    promptEn: 'Alpine valley at dawn, mist between mountains, crystal lake with reflection, purple sky, wooden cabin by the water, realistic 4K detail',
-    gradient: 'linear-gradient(135deg,#74b9ff,#0984e3)' },
-  { id: 'l2', category: 'landscape',
-    prompt: 'Марокканская пустыня, дюны на закате, одинокий караван верблюдов, золотой час, длинные тени, широкий угол, эпический ландшафт',
-    promptEn: 'Moroccan desert, dunes at sunset, lone camel caravan, golden hour, long shadows, wide angle, epic landscape',
-    gradient: 'linear-gradient(135deg,#f6d365,#fda085)' },
-  { id: 'l3', category: 'landscape',
-    prompt: 'Ночной Токио с высоты птичьего полёта, дождь, неоновые вывески, отражения в лужах, фуражировка, размытие движения машин',
-    promptEn: 'Tokyo at night from a bird-eye view, rain, neon signs, puddle reflections, motion blur of cars',
-    gradient: 'linear-gradient(135deg,#ff9a9e,#fad0c4)' },
-
-  // Characters
-  { id: 'c1', category: 'character',
-    prompt: 'Фэнтези-лучница в кожаной броне, длинные серебряные волосы, волшебный лук со светящимися рунами, мистический лес, объёмное освещение, Unreal Engine стиль',
-    promptEn: 'Fantasy archer in leather armor, long silver hair, magical bow with glowing runes, mystical forest, volumetric lighting, Unreal Engine style',
-    gradient: 'linear-gradient(135deg,#a18cd1,#fbc2eb)' },
-  { id: 'c2', category: 'character',
-    prompt: 'Космонавт на чужой планете, инопланетная флора, две луны в небе, мягкие пурпурные тона, реалистичный скафандр с отражениями, кинематографичный кадр',
-    promptEn: 'Astronaut on alien planet, exotic flora, two moons in sky, soft purple tones, realistic spacesuit with reflections, cinematic frame',
-    gradient: 'linear-gradient(135deg,#5ee7df,#b490ca)' },
-
-  // Food
-  { id: 'f1', category: 'food', model: 'nano-banana-pro',
-    prompt: 'Клубничный чизкейк крупным планом, капли конденсата на ягодах, мятный листик, мягкое окно-освещение, food-photography, высокая детализация',
-    promptEn: 'Strawberry cheesecake close-up, condensation drops on berries, mint leaf, soft window lighting, food photography, high detail',
-    gradient: 'linear-gradient(135deg,#fccb90,#d57eeb)' },
-  { id: 'f2', category: 'food',
-    prompt: 'Японский рамен в керамической пиале, пар поднимается, яйцо итамаго в разрезе, зелёный лук, минималистичная композиция, тёплое освещение',
-    promptEn: 'Japanese ramen in ceramic bowl, steam rising, soft-boiled egg cross-section, green onion, minimalist composition, warm lighting',
-    gradient: 'linear-gradient(135deg,#ffecd2,#fcb69f)' },
-
-  // Animals
-  { id: 'a1', category: 'animal',
-    prompt: 'Белый бенгальский тигр в прыжке через водную гладь, брызги воды замерли в воздухе, тропический фон, макросъёмка, высокая скорость затвора',
-    promptEn: 'White Bengal tiger leaping through water, frozen splashes mid-air, tropical background, macro shot, high shutter speed',
-    gradient: 'linear-gradient(135deg,#e0c3fc,#8ec5fc)' },
-  { id: 'a2', category: 'animal',
-    prompt: 'Милый рыжий корги в вязаном свитере у камина, плед, кружка какао рядом, тёплое уютное освещение, акварельный стиль',
-    promptEn: 'Cute corgi in a knitted sweater by fireplace, blanket, cocoa mug nearby, warm cozy lighting, watercolor style',
-    gradient: 'linear-gradient(135deg,#fad0c4,#ffd1ff)' },
-
-  // Fantasy
-  { id: 'fa1', category: 'fantasy',
-    prompt: 'Плавающий замок в облаках при закате, водопады стекают с его основания, радуги сквозь туман, драконы кружат вокруг башен, эпичный вид',
-    promptEn: 'Floating castle in clouds at sunset, waterfalls from its base, rainbows through mist, dragons circling towers, epic view',
-    gradient: 'linear-gradient(135deg,#ff6e7f,#bfe9ff)' },
-  { id: 'fa2', category: 'fantasy',
-    prompt: 'Лесной портал светящихся рун, магические искры, древние каменные колонны, туманная атмосфера, мистический синий свет',
-    promptEn: 'Forest portal of glowing runes, magical sparks, ancient stone columns, foggy atmosphere, mystical blue light',
-    gradient: 'linear-gradient(135deg,#30cfd0,#330867)' },
-
-  // Cyberpunk
-  { id: 'cy1', category: 'cyberpunk',
-    prompt: 'Хакер за терминалом, голографические экраны вокруг, неоновая подсветка клавиатуры, дождь за окном, neon noir, ретрофутуризм',
-    promptEn: 'Hacker at terminal, holographic screens around, neon keyboard backlight, rain outside, neon noir, retrofuturism',
-    gradient: 'linear-gradient(135deg,#f093fb,#f5576c)' },
-  { id: 'cy2', category: 'cyberpunk',
-    prompt: 'Мегаполис 2099, летающие авто между небоскрёбами, гигантские голограммы рекламы, густой дождь, синхи и магенты, широкий кадр',
-    promptEn: 'Megacity 2099, flying cars between skyscrapers, giant ad holograms, heavy rain, cyans and magentas, wide frame',
-    gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)' },
-
-  // Anime
-  { id: 'an1', category: 'anime',
-    prompt: 'Аниме-девушка с длинными розовыми волосами на фоне цветущей сакуры, школьная форма, лёгкий ветер, Studio Ghibli стиль, мягкая прорисовка',
-    promptEn: 'Anime girl with long pink hair against cherry blossoms, school uniform, light breeze, Studio Ghibli style, soft rendering',
-    gradient: 'linear-gradient(135deg,#fbc2eb,#a6c1ee)' },
-  { id: 'an2', category: 'anime',
-    prompt: 'Аниме-воин с катаной на фоне полной луны, развевающийся плащ, вишнёвые лепестки в воздухе, динамичный ракурс, cel-shading',
-    promptEn: 'Anime warrior with katana against full moon, flowing cape, cherry petals in air, dynamic angle, cel-shading',
-    gradient: 'linear-gradient(135deg,#ffecd2,#fcb69f)' },
-
-  // Product
-  { id: 'pr1', category: 'product',
-    prompt: 'Студийное фото кожаного кошелька на мраморной поверхности, мягкий верхний свет, минималистичная композиция, высокая детализация текстуры, коммерческая фотография',
-    promptEn: 'Studio photo of leather wallet on marble surface, soft top light, minimalist composition, high texture detail, commercial photography',
-    gradient: 'linear-gradient(135deg,#a8edea,#fed6e3)' },
-  { id: 'pr2', category: 'product',
-    prompt: 'Духи в стеклянном флаконе на чёрном фоне, капли воды на бутылке, драматическое освещение сбоку, глубокие тени, премиум-стиль',
-    promptEn: 'Perfume in glass bottle on black background, water drops on bottle, dramatic side lighting, deep shadows, premium style',
-    gradient: 'linear-gradient(135deg,#434343,#000000)' },
-
-  // Abstract
-  { id: 'ab1', category: 'abstract',
-    prompt: 'Жидкая металлическая скульптура в движении, переливы фиолетового и бирюзового, отражения, 3D render, Cinema 4D стиль, абстрактная композиция',
-    promptEn: 'Liquid metal sculpture in motion, purple and turquoise reflections, 3D render, Cinema 4D style, abstract composition',
-    gradient: 'linear-gradient(135deg,#667eea,#764ba2)' },
-  { id: 'ab2', category: 'abstract',
-    prompt: 'Взрыв цветного порошка в замедленной съёмке, радужные частицы в воздухе, чёрный фон, высокая скорость затвора, энергичная динамика',
-    promptEn: 'Colour powder explosion in slow motion, rainbow particles in air, black background, high shutter speed, energetic dynamic',
-    gradient: 'linear-gradient(135deg,#f093fb,#f5576c)' },
-]
-
-const catIcon: Record<CategoryId | 'all', string> = {
-  all:       'M4 6h16M4 12h16M4 18h16',
-  portrait:  'M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zm0 2c-3 0-8 1.5-8 4.5V20h16v-1.5c0-3-5-4.5-8-4.5z',
-  landscape: 'M3 18l5-6 4 5 3-3 6 8H3zm3-9a2 2 0 100-4 2 2 0 000 4z',
-  character: 'M12 2a5 5 0 015 5v1a5 5 0 01-10 0V7a5 5 0 015-5zm-7 20v-2a7 7 0 0114 0v2',
-  food:      'M8 2v10m-4 0h16v2c0 4-3 8-8 8s-8-4-8-8v-2zm12 0V2',
-  animal:    'M12 21a8 8 0 01-8-8c0-5 4-9 8-9s8 4 8 9a8 8 0 01-8 8zm-3-12a1 1 0 110-2 1 1 0 010 2zm6 0a1 1 0 110-2 1 1 0 010 2z',
-  fantasy:   'M12 2l2 5 5 1-4 3 1 5-4-3-4 3 1-5-4-3 5-1z',
-  cyberpunk: 'M8 4l-4 8 4 8M16 4l4 8-4 8M14 4l-4 16',
-  anime:     'M12 3l3 7h7l-5.5 4 2 7-6.5-4.5-6.5 4.5 2-7L2 10h7z',
-  product:   'M20 7H4l2-4h12zM4 7v13h16V7M10 11h4',
-  abstract:  'M12 3l9 9-9 9-9-9z',
-}
-
-function IdeaCard({ idea, lang, onUse }: { idea: Idea; lang: string; onUse: () => void }) {
-  const text = lang === 'en' ? idea.promptEn : idea.prompt
-  const cat = categories.find(c => c.id === idea.category)
   return (
     <div onClick={onUse} style={{
       position: 'relative', aspectRatio: '1 / 1',
       borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
       border: '1px solid var(--border)',
-      background: idea.gradient,
+      background: idea.mediaUrl ? 'var(--surface2)' : gradientFor(idea.id),
     }}>
-      {/* gradient overlay */}
+      {idea.mediaUrl && (
+        idea.mediaType === 'video' ? (
+          <video src={idea.mediaUrl} loop muted playsInline autoPlay
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <img src={idea.mediaUrl} alt="" loading="lazy"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        )
+      )}
+
+      {/* gradient overlay for legibility */}
       <div style={{
         position: 'absolute', inset: 0,
         background: 'linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.88) 100%)',
       }} />
+
+      {/* badge top-left */}
+      {idea.badge && (
+        <div style={{
+          position: 'absolute', top: 6, left: 6,
+          padding: '2px 6px', borderRadius: 4,
+          background: 'var(--accent)', color: 'var(--accent-text)',
+          fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, letterSpacing: 0.6,
+        }}>{idea.badge}</div>
+      )}
 
       {/* category badge top-right */}
       <div style={{
@@ -175,20 +58,17 @@ function IdeaCard({ idea, lang, onUse }: { idea: Idea; lang: string; onUse: () =
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
         fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)',
         fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase',
-      }}>
-        {cat ? (lang === 'en' ? cat.labelEn : cat.labelRu) : ''}
-      </div>
+      }}>{categoryName}</div>
 
-      {/* prompt text + model bottom */}
+      {/* model + prompt bottom */}
       <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8 }}>
-        {idea.model && (
-          <div style={{
-            fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)',
-            fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4,
-          }}>
-            ✦ {idea.model}
-          </div>
-        )}
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)',
+          fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          ✦ {idea.modelId.replace(/-/g, ' ')}
+        </div>
         <div style={{
           color: '#fff', fontSize: 11, lineHeight: 1.35,
           display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
@@ -203,18 +83,33 @@ function IdeaCard({ idea, lang, onUse }: { idea: Idea; lang: string; onUse: () =
 
 export default function IdeasPage() {
   const navigate = useNavigate()
-  const [activeCat, setActiveCat] = useState<CategoryId | 'all'>('all')
+  const [activeCat, setActiveCat] = useState<string>('all')
+  const [categories, setCategories] = useState<IdeaCategoryApi[]>([])
+  const [ideas, setIdeas] = useState<IdeaApi[]>([])
+  const [loading, setLoading] = useState(true)
   const lang = getLang()
 
-  const filtered = activeCat === 'all' ? ideas : ideas.filter(i => i.category === activeCat)
+  useEffect(() => {
+    Promise.all([getIdeaCategories(), getIdeas()])
+      .then(([cats, items]) => {
+        setCategories(cats)
+        setIdeas(items)
+      })
+      .catch(() => { /* keep empty */ })
+      .finally(() => setLoading(false))
+  }, [])
 
-  const handleUse = (idea: Idea) => {
-    navigate('/create', { state: { prompt: lang === 'en' ? idea.promptEn : idea.prompt, model: idea.model } })
+  const filtered = activeCat === 'all'
+    ? ideas
+    : ideas.filter(i => i.categoryId === activeCat)
+
+  const handleUse = (idea: IdeaApi) => {
+    const prompt = lang === 'en' ? (idea.promptEn || idea.promptRu) : (idea.promptRu || idea.promptEn)
+    navigate('/create', { state: { prompt, model: idea.modelId } })
   }
 
   return (
     <>
-      {/* Header */}
       <div className="topbar">
         <div className="topbar-eyebrow">INSPO // GALLERY</div>
         <div className="topbar-title">{lang === 'en' ? 'IDEAS' : 'ИДЕИ'}</div>
@@ -223,44 +118,55 @@ export default function IdeasPage() {
         </div>
       </div>
 
-      {/* Search bar (decorative) */}
-      <div style={{ padding: '12px 16px 8px' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 12px', borderRadius: 10,
-          background: 'var(--surface)', border: '1px solid var(--border)',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth={2}>
-            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" strokeLinecap="round"/>
-          </svg>
-          <span style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
-            {lang === 'en' ? 'search ideas...' : 'поиск идей...'}
-          </span>
-        </div>
-      </div>
-
-      {/* Category chips (mono pill style) */}
+      {/* Category chips */}
       <div className="filter-row noscroll">
-        {categories.map(c => {
-          const active = c.id === activeCat
-          return (
-            <button key={c.id} className={`filter-pill ${active ? 'active' : ''}`}
-              onClick={() => setActiveCat(c.id)}>
-              {lang === 'en' ? c.labelEn : c.labelRu}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Grid 2-col */}
-      <div style={{
-        padding: '4px 12px 20px',
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
-      }}>
-        {filtered.map(idea => (
-          <IdeaCard key={idea.id} idea={idea} lang={lang} onUse={() => handleUse(idea)} />
+        <button className={`filter-pill ${activeCat === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveCat('all')}>
+          {lang === 'en' ? 'All' : 'Все'}
+        </button>
+        {categories.filter(c => (c._count?.ideas ?? 0) > 0).map(c => (
+          <button key={c.id} className={`filter-pill ${activeCat === c.id ? 'active' : ''}`}
+            onClick={() => setActiveCat(c.id)}>
+            {lang === 'en' ? c.nameEn : c.nameRu}
+          </button>
         ))}
       </div>
+
+      {/* Grid */}
+      {loading ? (
+        <div style={{
+          padding: '4px 12px 20px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
+        }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton" style={{ aspectRatio: '1 / 1', borderRadius: 10 }} />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center' }}>
+          <div style={{
+            fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)',
+            letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8,
+          }}>— {lang === 'en' ? 'no ideas' : 'нет идей'}</div>
+          <div style={{ color: 'var(--text2)', fontSize: 14 }}>
+            {lang === 'en' ? 'Admin can add ideas via the panel.' : 'Админ может добавить идеи через панель.'}
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          padding: '4px 12px 20px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
+        }}>
+          {filtered.map(idea => {
+            const cat = categories.find(c => c.id === idea.categoryId)
+            const catName = cat ? (lang === 'en' ? cat.nameEn : cat.nameRu) : ''
+            return (
+              <IdeaCard key={idea.id} idea={idea} lang={lang}
+                categoryName={catName} onUse={() => handleUse(idea)} />
+            )
+          })}
+        </div>
+      )}
     </>
   )
 }

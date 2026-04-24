@@ -518,6 +518,116 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
+  // ═══ IDEAS — categories ═══
+
+  app.get('/idea-categories', async (_req, reply) => {
+    const cats = await prisma.ideaCategory.findMany({
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+      include: { _count: { select: { ideas: true } } },
+    })
+    return reply.send(cats)
+  })
+
+  app.post('/idea-categories', async (req, reply) => {
+    const body = req.body as { slug: string; nameRu: string; nameEn: string; position?: number }
+    if (!body.slug?.trim() || !body.nameRu?.trim() || !body.nameEn?.trim()) {
+      return reply.code(400).send({ error: 'slug, nameRu и nameEn обязательны' })
+    }
+    try {
+      const last = await prisma.ideaCategory.findFirst({ orderBy: { position: 'desc' } })
+      const position = body.position ?? (last?.position ?? -1) + 1
+      const cat = await prisma.ideaCategory.create({
+        data: { slug: body.slug.trim(), nameRu: body.nameRu.trim(), nameEn: body.nameEn.trim(), position },
+      })
+      return reply.send(cat)
+    } catch (e: any) {
+      if (e?.code === 'P2002') return reply.code(400).send({ error: 'Slug уже существует' })
+      throw e
+    }
+  })
+
+  app.put('/idea-categories/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = req.body as Partial<{ slug: string; nameRu: string; nameEn: string; position: number }>
+    try {
+      const cat = await prisma.ideaCategory.update({
+        where: { id },
+        data: {
+          ...(body.slug !== undefined && { slug: body.slug.trim() }),
+          ...(body.nameRu !== undefined && { nameRu: body.nameRu.trim() }),
+          ...(body.nameEn !== undefined && { nameEn: body.nameEn.trim() }),
+          ...(body.position !== undefined && { position: body.position }),
+        },
+      })
+      return reply.send(cat)
+    } catch (e: any) {
+      if (e?.code === 'P2002') return reply.code(400).send({ error: 'Slug уже существует' })
+      throw e
+    }
+  })
+
+  app.delete('/idea-categories/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    await prisma.ideaCategory.delete({ where: { id } })  // cascades to ideas
+    return reply.send({ ok: true })
+  })
+
+  // ═══ IDEAS — items ═══
+
+  app.get('/ideas', async (req, reply) => {
+    const { categoryId } = req.query as { categoryId?: string }
+    const ideas = await prisma.idea.findMany({
+      where: categoryId ? { categoryId } : {},
+      orderBy: { createdAt: 'desc' },
+    })
+    return reply.send(ideas)
+  })
+
+  app.post('/ideas', async (req, reply) => {
+    const body = req.body as IdeaBody
+    if (!body.categoryId || !body.modelId || !body.promptRu?.trim() || !body.promptEn?.trim()) {
+      return reply.code(400).send({ error: 'categoryId, modelId, promptRu, promptEn обязательны' })
+    }
+    const idea = await prisma.idea.create({
+      data: {
+        categoryId: body.categoryId,
+        modelId: body.modelId,
+        promptRu: body.promptRu.trim(),
+        promptEn: body.promptEn.trim(),
+        mediaUrl: body.mediaUrl ?? null,
+        mediaType: body.mediaType ?? 'image',
+        badge: body.badge ?? null,
+        enabled: body.enabled ?? true,
+      },
+    })
+    return reply.send(idea)
+  })
+
+  app.put('/ideas/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = req.body as Partial<IdeaBody>
+    const idea = await prisma.idea.update({
+      where: { id },
+      data: {
+        ...(body.categoryId !== undefined && { categoryId: body.categoryId }),
+        ...(body.modelId !== undefined && { modelId: body.modelId }),
+        ...(body.promptRu !== undefined && { promptRu: body.promptRu.trim() }),
+        ...(body.promptEn !== undefined && { promptEn: body.promptEn.trim() }),
+        ...(body.mediaUrl !== undefined && { mediaUrl: body.mediaUrl }),
+        ...(body.mediaType !== undefined && { mediaType: body.mediaType }),
+        ...(body.badge !== undefined && { badge: body.badge }),
+        ...(body.enabled !== undefined && { enabled: body.enabled }),
+      },
+    })
+    return reply.send(idea)
+  })
+
+  app.delete('/ideas/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    await prisma.idea.delete({ where: { id } })
+    return reply.send({ ok: true })
+  })
+
   // ═══ MEDIA UPLOAD (with compression) ═══
 
   // POST /admin/upload-media — accepts image or video, compresses, stores in /uploads/featured/
@@ -582,6 +692,17 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'Video compression failed' })
     }
   })
+}
+
+interface IdeaBody {
+  categoryId: string
+  modelId: string
+  promptRu: string
+  promptEn: string
+  mediaUrl: string | null
+  mediaType: 'image' | 'video'
+  badge: string | null
+  enabled: boolean
 }
 
 interface FeaturedBlockBody {

@@ -8,6 +8,7 @@ import multipart from '@fastify/multipart'
 import { authRoutes } from './routes/auth'
 import { feedRoutes } from './routes/feed'
 import { generateRoutes } from './routes/generate'
+import { ideasRoutes } from './routes/ideas'
 import { paymentRoutes } from './routes/payment'
 import { plansRoutes, profileRoutes } from './routes/profile'
 import { uploadRoutes } from './routes/upload'
@@ -43,6 +44,7 @@ async function main() {
   app.register(authRoutes,    { prefix: '/auth' })
   app.register(feedRoutes,    { prefix: '/feed' })
   app.register(generateRoutes,{ prefix: '/generate' })
+  app.register(ideasRoutes,   { prefix: '/ideas' })
   app.register(plansRoutes,   { prefix: '/plans' })
   app.register(paymentRoutes, { prefix: '/payment' })
   app.register(profileRoutes, { prefix: '/me' })

@@ -102,6 +102,39 @@ model FeaturedBlock {
   @@index([enabled, position])
 }
 
+// Curated prompt ideas shown on /ideas page; admin-managed.
+model IdeaCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  nameRu    String
+  nameEn    String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ideas     Idea[]
+
+  @@index([position])
+}
+
+model Idea {
+  id         String       @id @default(cuid())
+  categoryId String
+  category   IdeaCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  modelId    String       // model id from MODELS catalog
+  promptRu   String
+  promptEn   String
+  mediaUrl   String?      // /uploads/featured/<file> (uses same compressed upload pipeline)
+  mediaType  String       @default("image") // 'image' | 'video'
+  badge      String?
+  enabled    Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([categoryId, enabled])
+  @@index([enabled, createdAt])
+}
+
 // Per-model media preview override + visibility (for Create page).
 // Falls back to /uploads/previews/<modelId>-thumb.* defaults if no row.
 model ModelPreview {

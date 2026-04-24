@@ -160,6 +160,33 @@ export interface FeaturedBlockApi {
 export const getFeaturedBlocks = () =>
   req<FeaturedBlockApi[]>('GET', '/feed/featured')
 
+// Ideas (public)
+export interface IdeaCategoryApi {
+  id: string
+  slug: string
+  nameRu: string
+  nameEn: string
+  position: number
+  _count?: { ideas: number }
+}
+
+export interface IdeaApi {
+  id: string
+  categoryId: string
+  modelId: string
+  promptRu: string
+  promptEn: string
+  mediaUrl: string | null
+  mediaType: 'image' | 'video'
+  badge: string | null
+  enabled: boolean
+  createdAt: string
+}
+
+export const getIdeaCategories = () => req<IdeaCategoryApi[]>('GET', '/ideas/categories')
+export const getIdeas = (categoryId?: string) =>
+  req<IdeaApi[]>('GET', `/ideas${categoryId ? `?categoryId=${categoryId}` : ''}`)
+
 // Types
 export interface UserFull {
   id: string

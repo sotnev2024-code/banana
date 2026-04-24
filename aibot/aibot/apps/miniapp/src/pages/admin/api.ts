@@ -58,6 +58,22 @@ export const adminUpsertModelPreview = (
 ) => adminReq<any>('PUT', `/model-previews/${modelId}`, body)
 export const adminDeleteModelPreview = (modelId: string) => adminReq<any>('DELETE', `/model-previews/${modelId}`)
 
+// Idea categories
+export const adminListIdeaCategories = () => adminReq<any[]>('GET', '/idea-categories')
+export const adminCreateIdeaCategory = (body: { slug: string; nameRu: string; nameEn: string; position?: number }) =>
+  adminReq<any>('POST', '/idea-categories', body)
+export const adminUpdateIdeaCategory = (id: string, body: any) =>
+  adminReq<any>('PUT', `/idea-categories/${id}`, body)
+export const adminDeleteIdeaCategory = (id: string) =>
+  adminReq<any>('DELETE', `/idea-categories/${id}`)
+
+// Ideas
+export const adminListIdeas = (categoryId?: string) =>
+  adminReq<any[]>('GET', `/ideas${categoryId ? `?categoryId=${categoryId}` : ''}`)
+export const adminCreateIdea = (body: any) => adminReq<any>('POST', '/ideas', body)
+export const adminUpdateIdea = (id: string, body: any) => adminReq<any>('PUT', `/ideas/${id}`, body)
+export const adminDeleteIdea = (id: string) => adminReq<any>('DELETE', `/ideas/${id}`)
+
 // Media upload (with compression on server)
 export async function adminUploadMedia(file: File): Promise<{ url: string; mediaType: 'image' | 'video' }> {
   const form = new FormData()

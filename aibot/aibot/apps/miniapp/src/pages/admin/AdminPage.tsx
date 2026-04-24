@@ -10,6 +10,7 @@ import { AdminBroadcast } from './AdminBroadcast'
 import { AdminLogs } from './AdminLogs'
 import { AdminFeatured } from './AdminFeatured'
 import { AdminModelPreviews } from './AdminModelPreviews'
+import { AdminIdeas } from './AdminIdeas'
 
 const ADMIN_IDS = ['1724263429']
 
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'feed', label: 'Лента' },
   { id: 'featured', label: 'Блоки' },
   { id: 'previews', label: 'Превью' },
+  { id: 'ideas', label: 'Идеи' },
   { id: 'reports', label: 'Жалобы' },
   { id: 'payments', label: 'Платежи' },
   { id: 'promos', label: 'Промокоды' },
@@ -55,6 +57,7 @@ export default function AdminPage() {
         {tab === 'feed' && <AdminFeed />}
         {tab === 'featured' && <AdminFeatured />}
         {tab === 'previews' && <AdminModelPreviews />}
+        {tab === 'ideas' && <AdminIdeas />}
         {tab === 'reports' && <AdminReports />}
         {tab === 'payments' && <AdminPayments />}
         {tab === 'promos' && <AdminPromos />}
