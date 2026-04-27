@@ -351,6 +351,33 @@ export default function FeedPage() {
     else setPullDistance(0)
   }
 
+  // ── Mouse drag (desktop) — same swipe semantics as touch ──
+  const mouseDownRef = useRef(false)
+  const mouseStartXRef = useRef(0)
+  const mouseStartYRef = useRef(0)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't hijack clicks on links/buttons inside cells
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, video, [role="button"]')) return
+    mouseDownRef.current = true
+    mouseStartXRef.current = e.clientX
+    mouseStartYRef.current = e.clientY
+  }
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!mouseDownRef.current) return
+    mouseDownRef.current = false
+    const dx = e.clientX - mouseStartXRef.current
+    const dy = Math.abs(e.clientY - mouseStartYRef.current)
+    if (Math.abs(dx) > 60 && dy < 80) {
+      if (dx < 0 && filterIndex < FILTERS.length - 1) setFilterIndex(filterIndex + 1)
+      else if (dx > 0 && filterIndex > 0) setFilterIndex(filterIndex - 1)
+    }
+  }
+
+  const handleMouseLeave = () => { mouseDownRef.current = false }
+
   const gotoCreate = (modelId: string) => {
     navigate('/create', { state: { model: modelId } })
   }
@@ -443,7 +470,8 @@ export default function FeedPage() {
 
       {/* ── Masonry grid (CSS columns) ── */}
       <div ref={scrollRef} className="feed-grid"
-        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeave}>
         {items.map(item => (
           <FeedCard key={item.id} item={item}
             onClick={() => navigate(`/generation/${item.id}`)} />
