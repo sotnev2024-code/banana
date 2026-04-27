@@ -114,7 +114,11 @@ img, video { display: block; max-width: 100%; }
   padding-bottom: 96px;
   position: relative;
   z-index: 1;
+  /* Hide scrollbar across browsers */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.page::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ─── Bottom nav ─── */
 .bottom-nav {

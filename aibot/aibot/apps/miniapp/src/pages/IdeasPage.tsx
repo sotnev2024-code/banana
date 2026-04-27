@@ -207,19 +207,23 @@ function IdeaModal({ idea, categoryName, lang, onClose, onCopy, onUse }: {
 }) {
   const text = lang === 'en' ? (idea.promptEn || idea.promptRu) : (idea.promptRu || idea.promptEn)
 
+  // Sit the card above the bottom nav (60px + safe area). Higher z-index than nav.
+  const navHeight = 'calc(60px + env(safe-area-inset-bottom, 0px))'
   return (
     <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500,
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999,
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      padding: 0,
+      paddingBottom: navHeight,
+      paddingTop: 'calc(var(--tg-top, 0px) + 16px)',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         width: '100%', maxWidth: 480,
         background: 'var(--bg)',
         borderRadius: '16px 16px 0 0',
         display: 'flex', flexDirection: 'column',
-        maxHeight: '92vh', overflow: 'auto',
+        maxHeight: '100%', overflow: 'auto',
         border: '1px solid var(--border)',
+        borderBottom: 'none',
       }}>
         {/* Header with close */}
         <div style={{
