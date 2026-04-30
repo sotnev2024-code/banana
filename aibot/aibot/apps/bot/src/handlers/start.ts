@@ -81,9 +81,14 @@ function welcomeText(name: string, balance: number, isNew: boolean, bonus: numbe
 
 function buildKeyboard(lang: 'ru' | 'en') {
   const t = labels[lang]
-  return Markup.inlineKeyboard([
-    [Markup.button.webApp(`🟢 ${t.openApp}`, process.env.MINIAPP_URL!)],
-  ])
+  // Telegram inline button styles (Bot API addition): success | danger | primary
+  // Telegraf doesn't model the field, so cast through `any` to attach it.
+  const greenButton: any = {
+    text: t.openApp,
+    web_app: { url: process.env.MINIAPP_URL! },
+    style: 'success',
+  }
+  return { reply_markup: { inline_keyboard: [[greenButton]] } }
 }
 
 function getLang(user: any, tgLangCode?: string): 'ru' | 'en' {
