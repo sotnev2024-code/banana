@@ -81,34 +81,9 @@ function welcomeText(name: string, balance: number, isNew: boolean, bonus: numbe
 
 function buildKeyboard(lang: 'ru' | 'en') {
   const t = labels[lang]
-  const miniApp = process.env.MINIAPP_URL!
-
-  const rows: any[][] = []
-
-  // Main: Open app
-  rows.push([Markup.button.webApp(`🎨 ${t.openApp}`, miniApp)])
-
-  // Social row (Channel + Chat)
-  const socialRow: any[] = []
-  if (process.env.TG_CHANNEL_URL) socialRow.push(Markup.button.url(`📢 ${t.channel}`, process.env.TG_CHANNEL_URL))
-  if (process.env.TG_CHAT_URL)    socialRow.push(Markup.button.url(`💬 ${t.chat}`,    process.env.TG_CHAT_URL))
-  if (socialRow.length) rows.push(socialRow)
-
-  // Info row (Instagram + Support)
-  const infoRow: any[] = []
-  if (process.env.INSTAGRAM_URL)  infoRow.push(Markup.button.url(`📷 Instagram`, process.env.INSTAGRAM_URL))
-  infoRow.push(Markup.button.url(`💁 ${t.support}`, process.env.SUPPORT_URL || 'https://t.me/mnogoprofilnyi'))
-  rows.push(infoRow)
-
-  // Info button (optional)
-  if (process.env.INFO_URL) {
-    rows.push([Markup.button.url(`ℹ️ ${t.info}`, process.env.INFO_URL)])
-  }
-
-  // Referral — opens miniapp on /referral page
-  rows.push([Markup.button.webApp(`💰 ${t.referral}`, `${miniApp}/referral`)])
-
-  return Markup.inlineKeyboard(rows)
+  return Markup.inlineKeyboard([
+    [Markup.button.webApp(`🟢 ${t.openApp}`, process.env.MINIAPP_URL!)],
+  ])
 }
 
 function getLang(user: any, tgLangCode?: string): 'ru' | 'en' {
