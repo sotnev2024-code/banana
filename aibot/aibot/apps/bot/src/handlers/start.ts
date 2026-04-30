@@ -3,43 +3,112 @@ import { Markup } from 'telegraf'
 import { prisma } from '../index'
 import { WELCOME_BONUS, REFERRAL_BONUS } from '@aibot/shared'
 
-const texts = {
+const BRAND = 'PicPulse'
+
+const labels = {
   ru: {
-    welcome: (name: string, bonus: number) =>
-      `<b>${name}</b>, добро пожаловать в PicPulse AI Studio!\n\n` +
-      `+${bonus} токенов начислено.\n\n` +
-      `<b>Что умеет PicPulse:</b>\n` +
-      `  Генерация фото до 4K\n` +
-      `  Создание видео до 30 сек\n` +
-      `  AI музыка до 8 минут\n` +
-      `  Motion control и аватары\n` +
-      `  Лента с лайками и комментариями\n` +
-      `  Ежедневные бонусы и достижения\n\n` +
-      `20+ моделей: Nano Banana, Veo 3, Kling 3, Seedance, Grok, Suno`,
-    welcomeBack: (name: string, balance: number) => `<b>${name}</b>, с возвращением!\n\nБаланс: <b>${balance} токенов</b>`,
-    openStudio: 'Открыть студию',
     chooseLang: 'Выберите язык / Choose language',
     bonusDesc: 'Приветственный бонус',
+    openApp: 'Открыть приложение',
+    channel: 'Канал',
+    chat: 'Чат',
+    instagram: 'Instagram',
+    support: 'Поддержка',
+    info: 'Информация',
+    referral: 'Реферальная программа',
     referralNotify: (name: string, bonus: number) => `+${bonus} токенов — ${name} присоединился по вашей ссылке!`,
   },
   en: {
-    welcome: (name: string, bonus: number) =>
-      `<b>${name}</b>, welcome to PicPulse AI Studio!\n\n` +
-      `+${bonus} tokens credited.\n\n` +
-      `<b>What PicPulse can do:</b>\n` +
-      `  Photo generation up to 4K\n` +
-      `  Video creation up to 30 sec\n` +
-      `  AI music up to 8 min\n` +
-      `  Motion control & avatars\n` +
-      `  Social feed with likes & comments\n` +
-      `  Daily bonuses & achievements\n\n` +
-      `20+ models: Nano Banana, Veo 3, Kling 3, Seedance, Grok, Suno`,
-    welcomeBack: (name: string, balance: number) => `<b>${name}</b>, welcome back!\n\nBalance: <b>${balance} tokens</b>`,
-    openStudio: 'Open Studio',
     chooseLang: 'Choose language / Выберите язык',
     bonusDesc: 'Welcome bonus',
+    openApp: 'Open app',
+    channel: 'Channel',
+    chat: 'Chat',
+    instagram: 'Instagram',
+    support: 'Support',
+    info: 'Info',
+    referral: 'Referral program',
     referralNotify: (name: string, bonus: number) => `+${bonus} tokens — ${name} joined via your link!`,
   },
+}
+
+function welcomeText(name: string, balance: number, isNew: boolean, bonus: number, lang: 'ru' | 'en'): string {
+  if (lang === 'ru') {
+    return [
+      `👋 Привет, <b>${name}</b> | ${BRAND}`,
+      ``,
+      `AI-студия для контента, бизнеса и развлечений.`,
+      ``,
+      `• Фото и видео по описанию`,
+      `• Замена лица и редактирование деталей`,
+      `• AI-аватары и видео-тренды`,
+      `• Трансформация реальных продуктов`,
+      `• Дизайн графики и визуалов для соцсетей`,
+      ``,
+      `🔥 21+ AI моделей`,
+      `✨ Готовые идеи для генерации`,
+      `💰 Ежедневные бонусы и достижения`,
+      ``,
+      `🎨 Nano Banana Pro, Veo 3, Kling 3, Seedance 2, Suno, GPT Image 2 — всё в одном месте.`,
+      ``,
+      isNew
+        ? `🎁 <b>+${bonus} токенов</b> приветственный бонус начислен!`
+        : `💰 Баланс: <b>${balance} токенов</b>`,
+    ].join('\n')
+  }
+  return [
+    `👋 Hi, <b>${name}</b> | ${BRAND}`,
+    ``,
+    `AI studio for content, business and entertainment.`,
+    ``,
+    `• Photo & video from a prompt`,
+    `• Face swap and detail editing`,
+    `• AI avatars & video trends`,
+    `• Real product transformations`,
+    `• Graphics & visuals for social media`,
+    ``,
+    `🔥 21+ AI models`,
+    `✨ Ready-to-use prompt ideas`,
+    `💰 Daily bonuses & achievements`,
+    ``,
+    `🎨 Nano Banana Pro, Veo 3, Kling 3, Seedance 2, Suno, GPT Image 2 — all in one place.`,
+    ``,
+    isNew
+      ? `🎁 <b>+${bonus} tokens</b> welcome bonus credited!`
+      : `💰 Balance: <b>${balance} tokens</b>`,
+  ].join('\n')
+}
+
+function buildKeyboard(lang: 'ru' | 'en') {
+  const t = labels[lang]
+  const miniApp = process.env.MINIAPP_URL!
+
+  const rows: any[][] = []
+
+  // Main: Open app
+  rows.push([Markup.button.webApp(`🎨 ${t.openApp}`, miniApp)])
+
+  // Social row (Channel + Chat)
+  const socialRow: any[] = []
+  if (process.env.TG_CHANNEL_URL) socialRow.push(Markup.button.url(`📢 ${t.channel}`, process.env.TG_CHANNEL_URL))
+  if (process.env.TG_CHAT_URL)    socialRow.push(Markup.button.url(`💬 ${t.chat}`,    process.env.TG_CHAT_URL))
+  if (socialRow.length) rows.push(socialRow)
+
+  // Info row (Instagram + Support)
+  const infoRow: any[] = []
+  if (process.env.INSTAGRAM_URL)  infoRow.push(Markup.button.url(`📷 Instagram`, process.env.INSTAGRAM_URL))
+  infoRow.push(Markup.button.url(`💁 ${t.support}`, process.env.SUPPORT_URL || 'https://t.me/mnogoprofilnyi'))
+  rows.push(infoRow)
+
+  // Info button (optional)
+  if (process.env.INFO_URL) {
+    rows.push([Markup.button.url(`ℹ️ ${t.info}`, process.env.INFO_URL)])
+  }
+
+  // Referral — opens miniapp on /referral page
+  rows.push([Markup.button.webApp(`💰 ${t.referral}`, `${miniApp}/referral`)])
+
+  return Markup.inlineKeyboard(rows)
 }
 
 function getLang(user: any, tgLangCode?: string): 'ru' | 'en' {
@@ -57,44 +126,23 @@ export async function startHandler(ctx: Context) {
 
   // Parse deep link payload
   const payload = (ctx.message as any)?.text?.split(' ')[1] ?? ''
-  let referrerId: string | null = null
-
-  if (isNew && payload.startsWith('ref_')) {
-    const refCode = payload.slice(4)
-    const referrer = await prisma.user.findUnique({ where: { referralCode: refCode } })
-    if (referrer && referrer.telegramId !== telegramId) {
-      referrerId = referrer.id
-    }
-  }
-
-  // Detect language from Telegram
-  const detectedLang = tg.language_code?.startsWith('ru') ? 'ru' : 'en'
 
   if (isNew) {
-    // New user — ask language first
+    // New user — ask language first (then create user in langSelectHandler)
     await ctx.replyWithHTML(
-      texts.en.chooseLang,
+      labels.ru.chooseLang,
       Markup.inlineKeyboard([
-        [Markup.button.callback('Русский', `lang:ru:${payload}`)],
-        [Markup.button.callback('English', `lang:en:${payload}`)],
+        [Markup.button.callback('🇷🇺 Русский', `lang:ru:${payload}`)],
+        [Markup.button.callback('🇬🇧 English', `lang:en:${payload}`)],
       ]),
     )
     return
   }
 
-  // Existing user — show menu
+  // Existing user — full welcome
   const lang = getLang(existing, tg.language_code)
-  const t = texts[lang]
-
-  const miniAppUrl = process.env.MINIAPP_URL!
-  const welcomeText = t.welcomeBack(tg.first_name, existing!.balance)
-
-  await ctx.replyWithHTML(
-    welcomeText,
-    Markup.inlineKeyboard([
-      [Markup.button.webApp(t.openStudio, miniAppUrl)],
-    ]),
-  )
+  const text = welcomeText(tg.first_name, existing!.balance, false, 0, lang)
+  await ctx.replyWithHTML(text, buildKeyboard(lang))
 }
 
 export async function langSelectHandler(ctx: Context) {
@@ -108,19 +156,17 @@ export async function langSelectHandler(ctx: Context) {
   const tg = ctx.from!
   const telegramId = BigInt(tg.id)
 
-  // Check if user already exists (double click protection)
+  // Check if user already exists (double-click protection)
   const existing = await prisma.user.findUnique({ where: { telegramId } })
   if (existing) {
     await prisma.user.update({ where: { telegramId }, data: { lang } })
     await ctx.answerCbQuery()
-    const t = texts[lang]
-    await ctx.editMessageText(t.welcomeBack(tg.first_name, existing.balance), { parse_mode: 'HTML' })
-    await ctx.replyWithHTML(
-      t.welcomeBack(tg.first_name, existing.balance),
-      Markup.inlineKeyboard([
-        [Markup.button.webApp(t.openStudio, process.env.MINIAPP_URL!)],
-      ]),
-    )
+    const text = welcomeText(tg.first_name, existing.balance, false, 0, lang)
+    try { await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: buildKeyboard(lang).reply_markup }) }
+    catch {
+      // If edit fails (e.g. message too old), just send new
+      await ctx.replyWithHTML(text, buildKeyboard(lang))
+    }
     return
   }
 
@@ -147,10 +193,8 @@ export async function langSelectHandler(ctx: Context) {
     },
   })
 
-  const t = texts[lang]
-
   await prisma.transaction.create({
-    data: { userId: user.id, amount: WELCOME_BONUS, type: 'BONUS', description: t.bonusDesc },
+    data: { userId: user.id, amount: WELCOME_BONUS, type: 'BONUS', description: labels[lang].bonusDesc },
   })
 
   // Credit referrer
@@ -167,20 +211,14 @@ export async function langSelectHandler(ctx: Context) {
       try {
         await ctx.telegram.sendMessage(
           referrer.telegramId.toString(),
-          texts[refLang].referralNotify(tg.first_name, REFERRAL_BONUS),
+          labels[refLang].referralNotify(tg.first_name, REFERRAL_BONUS),
         )
       } catch {}
     }
   }
 
   await ctx.answerCbQuery()
-  await ctx.editMessageText(t.welcome(tg.first_name, WELCOME_BONUS), { parse_mode: 'HTML' })
-
-  const miniAppUrl = process.env.MINIAPP_URL!
-  await ctx.replyWithHTML(
-    t.welcome(tg.first_name, WELCOME_BONUS),
-    Markup.inlineKeyboard([
-      [Markup.button.webApp(t.openStudio, miniAppUrl)],
-    ]),
-  )
+  const text = welcomeText(tg.first_name, WELCOME_BONUS, true, WELCOME_BONUS, lang)
+  try { await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: buildKeyboard(lang).reply_markup }) }
+  catch { await ctx.replyWithHTML(text, buildKeyboard(lang)) }
 }
